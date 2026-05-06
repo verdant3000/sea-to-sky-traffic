@@ -13,6 +13,7 @@ STATION_NAME = os.environ.get("STATION_NAME", "test-station")
 
 # Central API
 API_ENDPOINT  = os.environ.get("API_ENDPOINT", "http://localhost:3000")
+API_KEY       = os.environ.get("API_KEY", "")       # shared secret, must match API server
 SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL", "60"))  # seconds between batch POSTs
 
 # Camera source

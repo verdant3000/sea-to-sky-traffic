@@ -29,10 +29,15 @@ def sync():
         ],
     }
 
+    headers = {}
+    if getattr(config, "API_KEY", None):
+        headers["X-Api-Key"] = config.API_KEY
+
     try:
         resp = requests.post(
             f"{config.API_ENDPOINT}/api/detections",
             json=payload,
+            headers=headers,
             timeout=10,
         )
         resp.raise_for_status()
