@@ -1,24 +1,53 @@
 import { useApiData } from '../hooks/useData';
 
-function DirectionCard({ dir, data, color }) {
-  const isNorth   = dir === 'northbound';
-  const arrow     = isNorth ? '↑' : '↓';
-  const label     = isNorth ? 'Northbound' : 'Southbound';
-  const bgClass   = isNorth ? 'bg-blue-50  border-blue-100'  : 'bg-orange-50 border-orange-100';
-  const numClass  = isNorth ? 'text-blue-700'  : 'text-orange-700';
-  const metaClass = isNorth ? 'text-blue-500'  : 'text-orange-500';
-  const arrowCls  = isNorth ? 'text-blue-400'  : 'text-orange-400';
+const STATUS_DOT = {
+  free:      { color: 'bg-green-500',  ring: 'ring-green-200',  label: 'Free flow'  },
+  degraded:  { color: 'bg-amber-400',  ring: 'ring-amber-200',  label: 'Slow'       },
+  congested: { color: 'bg-red-500',    ring: 'ring-red-200',    label: 'Congested'  },
+  no_data:   { color: 'bg-slate-300',  ring: 'ring-slate-200',  label: 'No speed data' },
+};
+
+function FlowStatusBadge({ status }) {
+  const s = STATUS_DOT[status] ?? STATUS_DOT.no_data;
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`inline-block w-2 h-2 rounded-full ring-2 ${s.color} ${s.ring}`} />
+      <span className="text-xs text-gray-500">{s.label}</span>
+    </div>
+  );
+}
+
+function DirectionCard({ dir, data }) {
+  const isNorth  = dir === 'northbound';
+  const arrow    = isNorth ? '↑' : '↓';
+  const label    = isNorth ? 'Northbound' : 'Southbound';
+  const bgClass  = isNorth ? 'bg-blue-50  border-blue-100'   : 'bg-orange-50 border-orange-100';
+  const numClass = isNorth ? 'text-blue-700'   : 'text-orange-700';
+  const metaCls  = isNorth ? 'text-blue-500'   : 'text-orange-500';
+  const arrowCls = isNorth ? 'text-blue-400'   : 'text-orange-400';
 
   return (
-    <div className={`flex flex-col items-center rounded-2xl border py-10 px-6 ${bgClass}`}>
+    <div className={`flex flex-col items-center rounded-2xl border py-8 px-6 ${bgClass}`}>
       <span className={`text-3xl mb-3 ${arrowCls}`}>{arrow}</span>
       <span className={`text-7xl font-bold tabular-nums leading-none ${numClass}`}>
         {data ? Number(data.vehicles_per_hour) : '—'}
       </span>
-      <span className={`text-sm font-medium mt-3 ${metaClass}`}>vehicles / hr</span>
-      <span className={`text-xs mt-1 ${metaClass} opacity-70`}>{label}</span>
+      <span className={`text-sm font-medium mt-3 ${metaCls}`}>vehicles / hr</span>
+      <span className={`text-xs mt-0.5 ${metaCls} opacity-70`}>{label}</span>
+
+      {/* Flow status indicator */}
+      <div className="mt-4">
+        <FlowStatusBadge status={data?.flow_status ?? 'no_data'} />
+      </div>
+
+      {data?.avg_speed_kmh && (
+        <span className="text-xs text-gray-400 mt-1 tabular-nums">
+          avg {data.avg_speed_kmh} km/h
+        </span>
+      )}
+
       {data && (
-        <span className="text-xs text-gray-400 mt-4 tabular-nums">
+        <span className="text-xs text-gray-400 mt-3 tabular-nums">
           {data.count} counted this window
         </span>
       )}
@@ -30,7 +59,6 @@ export default function LiveView() {
   const { data, loading, error, lastUpdated } = useApiData('/api/flow/live', 30_000);
 
   const stations = data?.stations ?? [];
-  // For the demo we show the first active station; corridor view will show all
   const station  = stations[0];
   const nb       = station?.directions.find(d => d.direction === 'northbound');
   const sb       = station?.directions.find(d => d.direction === 'southbound');
@@ -41,7 +69,6 @@ export default function LiveView() {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Card header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <span className="relative flex h-2.5 w-2.5">
@@ -67,11 +94,9 @@ export default function LiveView() {
           </div>
         )}
 
-        {(loading && !data) && (
+        {loading && !data && (
           <div className="grid grid-cols-2 gap-5">
-            {[0, 1].map(i => (
-              <div key={i} className="h-52 rounded-2xl bg-gray-50 animate-pulse" />
-            ))}
+            {[0, 1].map(i => <div key={i} className="h-52 rounded-2xl bg-gray-50 animate-pulse" />)}
           </div>
         )}
 

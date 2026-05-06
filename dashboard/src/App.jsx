@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
-import LiveView       from './components/LiveView';
-import HourlyChart    from './components/HourlyChart';
-import VehicleMix     from './components/VehicleMix';
-import PatternHeatmap from './components/PatternHeatmap';
+import LiveView        from './components/LiveView';
+import HourlyChart     from './components/HourlyChart';
+import SpeedChart      from './components/SpeedChart';
+import FlowRatio       from './components/FlowRatio';
+import VehicleMix      from './components/VehicleMix';
+import EmergencyCounter from './components/EmergencyCounter';
+import PatternHeatmap  from './components/PatternHeatmap';
 
 function useClock() {
   const [time, setTime] = useState(new Date());
@@ -22,7 +25,6 @@ export default function App() {
       {/* Header */}
       <header style={{ backgroundColor: '#0f2b52' }} className="text-white shadow-xl">
         <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-
           <div>
             <div className="flex items-center gap-3">
               <span className="text-2xl font-bold tracking-tight">Sea to Sky</span>
@@ -33,7 +35,6 @@ export default function App() {
               Highway 99 &nbsp;·&nbsp; Squamish → Whistler → Pemberton
             </p>
           </div>
-
           <div className="text-right">
             <div className="flex items-center gap-2 justify-end mb-1">
               <span className="relative flex h-2 w-2">
@@ -49,30 +50,36 @@ export default function App() {
               })}
             </p>
           </div>
-
         </div>
-
-        {/* Colour bar — northbound/southbound indicator */}
+        {/* Northbound / Southbound colour bar */}
         <div className="h-0.5 flex">
           <div className="flex-1 bg-blue-500" />
           <div className="flex-1 bg-orange-500" />
         </div>
       </header>
 
-      {/* Main content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8 space-y-6">
 
-        {/* 1. Live view */}
-        <LiveView />
+        {/* Row 1: Live flow (wide) + Direction ratio (narrow) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2"><LiveView /></div>
+          <div><FlowRatio /></div>
+        </div>
 
-        {/* 2. Hourly chart */}
+        {/* Row 2: 24-hour traffic chart */}
         <HourlyChart />
 
-        {/* 3. Vehicle mix + 4. Pattern heatmap */}
+        {/* Row 3: Speed trend */}
+        <SpeedChart />
+
+        {/* Row 4: Vehicle mix + Emergency counter */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <VehicleMix />
-          <PatternHeatmap />
+          <EmergencyCounter />
         </div>
+
+        {/* Row 5: Weekly pattern heatmap */}
+        <PatternHeatmap />
 
       </main>
 
