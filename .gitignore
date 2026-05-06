@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+
+# YOLO model weights (download on first run, ~6MB each)
+*.pt
+
+# SQLite detection buffer
+*.db
+
+# Node
+node_modules/
+
+# Env files
+.env
+
+# macOS
+.DS_Store
