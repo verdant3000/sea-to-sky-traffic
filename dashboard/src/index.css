@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+}
+
+/* Pulse ring for the live indicator */
+@keyframes ping-slow {
+  75%, 100% { transform: scale(2); opacity: 0; }
+}

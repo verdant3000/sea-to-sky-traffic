@@ -1,10 +1,12 @@
 require('dotenv').config();
 const express = require('express');
+const cors    = require('cors');
 const cron    = require('node-cron');
 const db      = require('./db');
 const { runAggregation } = require('./jobs/aggregate');
 
 const app = express();
+app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 
 // Routes
