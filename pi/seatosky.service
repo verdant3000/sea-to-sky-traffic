@@ -1,0 +1,17 @@
+[Unit]
+Description=Sea to Sky Traffic Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/sea-to-sky-traffic/pi
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/pi/sea-to-sky-traffic/.env
+ExecStart=/home/pi/sea-to-sky-traffic/venv/bin/python detect.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
