@@ -10,10 +10,11 @@ app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 
 // Routes
-app.use('/api/detections', require('./routes/detections'));
-app.use('/api/stations',   require('./routes/stations'));
-app.use('/api/flow',       require('./routes/flow'));
-app.use('/api/speed',      require('./routes/speed'));
+app.use('/api/detections',  require('./routes/detections'));
+app.use('/api/environment', require('./routes/environment'));
+app.use('/api/stations',    require('./routes/stations'));
+app.use('/api/flow',        require('./routes/flow'));
+app.use('/api/speed',       require('./routes/speed'));
 app.use('/api/patterns',   require('./routes/patterns'));
 app.use('/api/events',     require('./routes/events'));
 app.use('/api/correlation',require('./routes/correlation'));

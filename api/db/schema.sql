@@ -77,6 +77,23 @@ CREATE TABLE IF NOT EXISTS speed_avg_10min (
 
 CREATE INDEX IF NOT EXISTS idx_speed_window ON speed_avg_10min (window_start DESC, station_id);
 
+-- Environmental sensor readings (BME280 inside case + outside ambient)
+-- Synced from Pi every ENV_SYNC_INTERVAL seconds
+CREATE TABLE IF NOT EXISTS env_readings (
+  id               BIGSERIAL PRIMARY KEY,
+  station_id       INTEGER REFERENCES stations(station_id),
+  timestamp        TIMESTAMPTZ NOT NULL,
+  sensor_location  TEXT NOT NULL CHECK (sensor_location IN ('inside', 'outside')),
+  temp_c           REAL,
+  humidity_pct     REAL,
+  pressure_hpa     REAL,       -- NULL for inside sensor
+  received_at      TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (station_id, timestamp, sensor_location)
+);
+
+CREATE INDEX IF NOT EXISTS idx_env_station_time  ON env_readings (station_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_env_location_time ON env_readings (sensor_location, timestamp DESC);
+
 -- Seed a test station so the Pi can start shipping immediately
 INSERT INTO stations (name, location, direction_a, direction_b)
 VALUES ('test-station', 'Local test', 'northbound', 'southbound')

@@ -2,3 +2,6 @@ ultralytics>=8.0.0
 opencv-python>=4.8.0
 requests>=2.31.0
 python-dotenv>=1.0.0
+# BME280 environmental sensors (Pi only — not needed for Mac testing)
+smbus2>=0.4.3
+RPi.bme280>=0.2.1

@@ -44,3 +44,14 @@ DB_PATH = os.environ.get("DB_PATH", "detections.db")
 CAMERA_HEIGHT_M   = float(os.environ.get("CAMERA_HEIGHT_M",  "4.0"))
 CAMERA_ANGLE_DEG  = float(os.environ.get("CAMERA_ANGLE_DEG", "30.0"))
 FRAME_RATE        = int(os.environ.get("FRAME_RATE", "10"))  # target processing FPS
+
+# BME280 environmental sensors via I2C
+# Default addresses: inside case = 0x77 (SDO pulled high), outside = 0x76 (SDO to GND)
+ENV_INSIDE_I2C_ADDR  = int(os.environ.get("ENV_INSIDE_I2C_ADDR",  "0x77"), 16)
+ENV_OUTSIDE_I2C_ADDR = int(os.environ.get("ENV_OUTSIDE_I2C_ADDR", "0x76"), 16)
+ENV_READ_INTERVAL    = int(os.environ.get("ENV_READ_INTERVAL",    "60"))   # seconds between reads
+ENV_SYNC_INTERVAL    = int(os.environ.get("ENV_SYNC_INTERVAL",    "300"))  # seconds between API syncs
+
+# Alert thresholds for inside-case sensor
+INSIDE_TEMP_MAX_C   = float(os.environ.get("INSIDE_TEMP_MAX_C",   "55.0"))
+INSIDE_HUMIDITY_MAX = float(os.environ.get("INSIDE_HUMIDITY_MAX", "80.0"))

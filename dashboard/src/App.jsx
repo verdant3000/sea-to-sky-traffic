@@ -6,6 +6,7 @@ import FlowRatio       from './components/FlowRatio';
 import VehicleMix      from './components/VehicleMix';
 import EmergencyCounter from './components/EmergencyCounter';
 import PatternHeatmap  from './components/PatternHeatmap';
+import StationHealth   from './components/StationHealth';
 
 function useClock() {
   const [time, setTime] = useState(new Date());
@@ -80,6 +81,9 @@ export default function App() {
 
         {/* Row 5: Weekly pattern heatmap */}
         <PatternHeatmap />
+
+        {/* Row 6: Station health — case temp/humidity + ambient weather context */}
+        <StationHealth stationId={1} />
 
       </main>
 

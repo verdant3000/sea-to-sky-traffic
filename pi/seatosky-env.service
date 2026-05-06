@@ -1,0 +1,17 @@
+[Unit]
+Description=Sea to Sky Environmental Monitor (BME280 sensors)
+After=network-online.target seatosky.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/sea-to-sky-traffic/pi
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/pi/sea-to-sky-traffic/.env
+ExecStart=/home/pi/sea-to-sky-traffic/venv/bin/python env_reader.py
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
