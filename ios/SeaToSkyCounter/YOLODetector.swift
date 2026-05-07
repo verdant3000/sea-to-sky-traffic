@@ -21,9 +21,9 @@ class YOLODetector {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
             do {
-                // Xcode compiles yolov8n_int8.mlpackage → yolov8n_int8.mlmodelc in the bundle.
-                guard let url = Bundle.main.url(forResource: "yolov8n_int8", withExtension: "mlmodelc") else {
-                    print("[YOLO] yolov8n_int8.mlmodelc not found in bundle — did you add the .mlpackage to Xcode?")
+                // Xcode compiles yolov8n.mlpackage → yolov8n.mlmodelc in the bundle.
+                guard let url = Bundle.main.url(forResource: "yolov8n", withExtension: "mlmodelc") else {
+                    print("[YOLO] yolov8n.mlmodelc not found in bundle — did you add the .mlpackage to Xcode?")
                     return
                 }
                 let cfg = MLModelConfiguration()

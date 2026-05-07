@@ -181,8 +181,8 @@ Triple-click the side button → enter passcode → tap **End**.
 
 ## Troubleshooting
 
-**"yolov8n_int8.mlmodelc not found in bundle"**
-The model file wasn't added to the Xcode target. Select `yolov8n_int8.mlpackage` in the navigator → check "SeaToSkyCounter" in Target Membership on the right panel.
+**"yolov8n.mlmodelc not found in bundle"**
+The model file wasn't added to the Xcode target. Select `yolov8n.mlpackage` in the navigator → check "SeaToSkyCounter" in Target Membership on the right panel.
 
 **Loading model… stays indefinitely**
 The Neural Engine may be unavailable. Check `cfg.computeUnits` in `YOLODetector.swift` — try `.cpuOnly` temporarily to verify inference works at all.
