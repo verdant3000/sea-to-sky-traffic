@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  These keys must be present in your Xcode project's Info.plist.
+  When you create the Xcode project, add these manually in the Info tab,
+  or merge them into the generated Info.plist.
+-->
+<plist version="1.0">
+<dict>
+
+    <!-- Required: explains camera use to iOS (and App Store review) -->
+    <key>NSCameraUsageDescription</key>
+    <string>Sea to Sky Counter uses the camera to detect and count vehicles on Highway 99.</string>
+
+    <!-- Prevents the app from being used in Split View / Slide Over on iPad.
+         Required for apps that use UIRequiresFullScreen-style full-camera access. -->
+    <key>UIRequiresFullScreen</key>
+    <true/>
+
+    <!-- Lock to portrait (phone mounted portrait on gorilla pod).
+         Remove landscapeLeft/Right if you want to allow landscape. -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+
+    <!-- Hides the status bar so the camera preview is full-screen. -->
+    <key>UIStatusBarHidden</key>
+    <true/>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <false/>
+
+</dict>
+</plist>
