@@ -17,9 +17,9 @@ API_KEY       = os.environ.get("API_KEY", "")       # shared secret, must match 
 SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL", "60"))  # seconds between batch POSTs
 
 # Camera source
-#   Mac testing : "0"  → webcam index 0
-#   Pi (v4l2)   : "0"  → /dev/video0 (libcamera-v4l2 compat layer)
-#   Pi (native) : set CAMERA_BACKEND=picamera2 instead (future)
+#   Mac webcam  : "0"        → index 0 via AVFoundation (also finds Continuity Camera)
+#   Pi (v4l2)   : "0"        → /dev/video0 (libcamera-v4l2 compat layer)
+#   RTSP stream : "rtsp://host:port/path"  → uses FFmpeg backend
 CAMERA_SOURCE = os.environ.get("CAMERA_SOURCE", "0")
 
 # YOLO

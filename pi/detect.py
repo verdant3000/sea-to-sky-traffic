@@ -3,6 +3,7 @@
 Sea to Sky Traffic Monitor — edge detection script.
 
 Mac testing:  python detect.py --show --no-sync
+RTSP source:  CAMERA_SOURCE=rtsp://192.168.x.x:8554/live python detect.py --show --no-sync
 List cameras: python detect.py --list-cameras
 Pi production: runs as systemd service (see seatosky.service)
 """
@@ -10,6 +11,7 @@ Pi production: runs as systemd service (see seatosky.service)
 import argparse
 import logging
 import math
+import platform
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -49,16 +51,24 @@ FRAME_SAVE_INTERVAL = 30  # seconds between full-frame snapshots
 log = logging.getLogger(__name__)
 
 
+def _is_macos() -> bool:
+    return platform.system() == "Darwin"
+
+
 # ---------------------------------------------------------------------------
 # Camera listing
 # ---------------------------------------------------------------------------
 
 def list_cameras():
-    """Scan indices 0–9, print resolution + hint for Continuity Camera."""
-    print("Scanning camera sources 0–9 …\n")
+    """Scan indices 0–9. Uses AVFoundation on macOS so Continuity Camera devices appear."""
+    # AVFoundation on macOS enumerates virtual cameras (Continuity Camera, NDI, etc.)
+    # that the default CAP_ANY / CAP_V4L2 path misses.
+    backend      = cv2.CAP_AVFOUNDATION if _is_macos() else cv2.CAP_ANY
+    backend_name = "AVFoundation" if _is_macos() else "default"
+    print(f"Scanning camera indices 0–9 via {backend_name} backend…\n")
     found = []
     for idx in range(10):
-        cap = cv2.VideoCapture(idx)
+        cap = cv2.VideoCapture(idx, backend)
         if cap.isOpened():
             w   = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h   = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -69,18 +79,22 @@ def list_cameras():
         print("  No cameras found.")
     else:
         for idx, w, h, fps in found:
-            hint = " ← built-in webcam" if idx == 0 else " ← external / iPhone Continuity Camera?"
+            hint = " ← built-in webcam" if idx == 0 else ""
             print(f"  [{idx}]  {w}×{h}  {fps:.0f} fps{hint}")
-    print(f"\nCurrent CAMERA_SOURCE = {config.CAMERA_SOURCE}")
-    print("Set CAMERA_SOURCE=<index> in .env to switch.")
+    print()
+    print("RTSP streams are not enumerated here — set directly, e.g.:")
+    print("  CAMERA_SOURCE=rtsp://192.168.x.x:8554/live")
+    print()
+    print(f"Current CAMERA_SOURCE = {config.CAMERA_SOURCE}")
+    print("Set CAMERA_SOURCE=<index or rtsp://…> in .env to switch.")
 
 
 # ---------------------------------------------------------------------------
 # Capture helpers
 # ---------------------------------------------------------------------------
 
-def make_capture_dirs(date_str, save_frames=False, save_video=False):
-    base = Path("captures") / date_str
+def make_capture_dirs(date_str, save_frames=False, save_video=False, captures_dir="captures"):
+    base = Path(captures_dir) / date_str
     paths = {"base": base}
     if save_frames:
         (base / "frames").mkdir(parents=True, exist_ok=True)
@@ -227,9 +241,20 @@ def estimate_speed(track, fps, camera_height_m, camera_angle_deg):
 # Camera
 # ---------------------------------------------------------------------------
 
+_RTSP_SCHEMES = ("rtsp://", "rtsps://", "rtmp://")
+
+
 def open_camera(source: str) -> cv2.VideoCapture:
-    cap = cv2.VideoCapture(int(source)) if source.isdigit() else \
-          cv2.VideoCapture(source, cv2.CAP_GSTREAMER)
+    if source.isdigit():
+        # AVFoundation on macOS sees Continuity Camera virtual devices;
+        # the default backend only finds physical USB/PCI cameras.
+        backend = cv2.CAP_AVFOUNDATION if _is_macos() else cv2.CAP_ANY
+        cap = cv2.VideoCapture(int(source), backend)
+    elif source.lower().startswith(_RTSP_SCHEMES):
+        cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # minimize latency, discard stale frames
+    else:
+        cap = cv2.VideoCapture(source)
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open camera: {source!r}")
     return cap
@@ -281,8 +306,10 @@ def main():
     parser.add_argument("--save-frames",  action="store_true",
                         help="Save full frames every 30 s + vehicle crops on each detection "
                              "→ captures/YYYY-MM-DD/frames/ and vehicles/")
-    parser.add_argument("--save-video",   action="store_true",
-                        help="Record full session → captures/YYYY-MM-DD/session_HHMMSS.mp4")
+    parser.add_argument("--save-video",    action="store_true",
+                        help="Record full session → <captures-dir>/YYYY-MM-DD/session_HHMMSS.mp4")
+    parser.add_argument("--captures-dir", default="captures", metavar="PATH",
+                        help="Root directory for frame/video saves (default: captures/)")
     args = parser.parse_args()
 
     # Handle --list-cameras before loading model (fast exit)
@@ -306,14 +333,15 @@ def main():
 
     # Capture directory / video setup
     today    = datetime.now().strftime("%Y-%m-%d")
-    cap_dirs = make_capture_dirs(today, save_frames=args.save_frames, save_video=args.save_video)
+    cap_dirs = make_capture_dirs(today, save_frames=args.save_frames, save_video=args.save_video,
+                                 captures_dir=args.captures_dir)
     video_writer    = None
     last_frame_save = 0.0
 
     if args.save_frames:
-        log.info(f"Saving frames → captures/{today}/frames/  vehicles → captures/{today}/vehicles/")
+        log.info(f"Saving frames → {cap_dirs['frames']}  vehicles → {cap_dirs['vehicles']}")
     if args.save_video:
-        log.info(f"Session video → captures/{today}/session_*.mp4")
+        log.info(f"Session video → {cap_dirs['video_dir']}/session_*.mp4")
 
     log.info(f"Loading YOLO model: {config.YOLO_MODEL}")
     model = YOLO(config.YOLO_MODEL)
@@ -339,8 +367,15 @@ def main():
 
             ret, frame = cap.read()
             if not ret:
-                log.warning("Frame capture failed, retrying…")
-                time.sleep(0.2)
+                log.warning("Frame capture failed — reconnecting…")
+                cap.release()
+                time.sleep(2.0)
+                try:
+                    cap = open_camera(config.CAMERA_SOURCE)
+                    log.info("Camera reconnected.")
+                except RuntimeError as exc:
+                    log.error(f"Reconnect failed: {exc} — retrying in 5 s…")
+                    time.sleep(5.0)
                 continue
 
             # Full-frame snapshot every 30 s
