@@ -1,5 +1,4 @@
 import SwiftUI
-import AVFoundation
 
 // MARK: - Root view
 
@@ -34,33 +33,17 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Camera preview (UIViewRepresentable)
+// MARK: - Camera preview (UIViewControllerRepresentable)
 
-struct CameraPreviewView: UIViewRepresentable {
-    let vm: StationViewModel
+struct CameraPreviewView: UIViewControllerRepresentable {
+    @ObservedObject var vm: StationViewModel
 
-    func makeUIView(context: Context) -> PreviewUIView {
-        PreviewUIView()
+    func makeUIViewController(context: Context) -> CameraPreviewViewController {
+        CameraPreviewViewController(session: vm.captureSession)
     }
 
-    func updateUIView(_ uiView: PreviewUIView, context: Context) {
-        uiView.setPreviewLayer(vm.makeCameraPreviewLayer())
-    }
-}
-
-final class PreviewUIView: UIView {
-    private var previewLayer: AVCaptureVideoPreviewLayer?
-
-    func setPreviewLayer(_ layer: AVCaptureVideoPreviewLayer) {
-        previewLayer?.removeFromSuperlayer()
-        layer.frame = bounds
-        self.layer.insertSublayer(layer, at: 0)
-        previewLayer = layer
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        previewLayer?.frame = bounds
+    func updateUIViewController(_ vc: CameraPreviewViewController, context: Context) {
+        vc.setMirrored(vm.isMirrored)
     }
 }
 

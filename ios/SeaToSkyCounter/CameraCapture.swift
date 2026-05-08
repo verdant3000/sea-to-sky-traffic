@@ -1,5 +1,4 @@
 import AVFoundation
-import UIKit
 
 protocol CameraCaptureDelegate: AnyObject {
     func cameraCapture(_ capture: CameraCapture, didOutput pixelBuffer: CVPixelBuffer)
@@ -8,7 +7,8 @@ protocol CameraCaptureDelegate: AnyObject {
 class CameraCapture: NSObject {
     weak var delegate: CameraCaptureDelegate?
 
-    private let session      = AVCaptureSession()
+    // Exposed so CameraPreviewViewController can attach its preview layer.
+    let session      = AVCaptureSession()
     private let videoOutput  = AVCaptureVideoDataOutput()
     private let sessionQueue = DispatchQueue(label: "com.seatosky.camera.session")
     private let outputQueue  = DispatchQueue(label: "com.seatosky.camera.output",
@@ -16,7 +16,6 @@ class CameraCapture: NSObject {
 
     private var currentInput:    AVCaptureDeviceInput?
     private var currentPosition: AVCaptureDevice.Position = .back
-    private weak var previewLayer: AVCaptureVideoPreviewLayer?
 
     // MARK: - Setup
 
@@ -34,17 +33,15 @@ class CameraCapture: NSObject {
                 let input  = try? AVCaptureDeviceInput(device: device),
                 self.session.canAddInput(input)
             else {
-                DispatchQueue.main.async {
-                    completion(.failure(CameraError.deviceUnavailable))
-                }
+                DispatchQueue.main.async { completion(.failure(CameraError.deviceUnavailable)) }
                 return
             }
             self.session.addInput(input)
             self.currentInput    = input
             self.currentPosition = .back
 
-            // Continuous auto-exposure; lock WB for consistent detection.
             try? device.lockForConfiguration()
+            device.videoZoomFactor = 1.0   // prevent any automatic digital zoom
             if device.isExposureModeSupported(.continuousAutoExposure) {
                 device.exposureMode = .continuousAutoExposure
             }
@@ -63,17 +60,12 @@ class CameraCapture: NSObject {
                 self.session.addOutput(self.videoOutput)
             }
 
-            self.applyOrientation()
+            // Keep the pixel buffer in landscape orientation so YOLO
+            // receives frames that match what the preview layer shows.
+            self.applyOutputOrientation()
 
             DispatchQueue.main.async { completion(.success(())) }
         }
-    }
-
-    func makePreviewLayer() -> AVCaptureVideoPreviewLayer {
-        let layer = AVCaptureVideoPreviewLayer(session: session)
-        layer.videoGravity = .resizeAspectFill
-        previewLayer = layer
-        return layer
     }
 
     func start() { sessionQueue.async { self.session.startRunning() } }
@@ -99,42 +91,41 @@ class CameraCapture: NSObject {
                 return
             }
             self.session.addInput(input)
+            try? device.lockForConfiguration()
+            device.videoZoomFactor = 1.0
+            device.unlockForConfiguration()
             self.currentInput    = input
             self.currentPosition = newPos
-            self.applyOrientation()
+            self.applyOutputOrientation()
             self.session.commitConfiguration()
             DispatchQueue.main.async { completion(.success(())) }
         }
     }
 
-    // Mirrors the pixel buffer fed to YOLO *and* the preview layer so
-    // bounding boxes, tripwire, and the visible image stay in sync.
-    func setMirrored(_ mirrored: Bool) {
+    // Mirrors the pixel buffer fed to YOLO so it matches the preview layer.
+    // The preview layer's own mirroring is handled by CameraPreviewViewController.
+    func setOutputMirrored(_ mirrored: Bool) {
         sessionQueue.async { [weak self] in
-            guard let self else { return }
-            if let conn = self.videoOutput.connection(with: .video),
-               conn.isVideoMirroringSupported {
-                conn.automaticallyAdjustsVideoMirroring = false
-                conn.isVideoMirrored = mirrored
-            }
-            DispatchQueue.main.async { [weak self] in
-                if let conn = self?.previewLayer?.connection,
-                   conn.isVideoMirroringSupported {
-                    conn.automaticallyAdjustsVideoMirroring = false
-                    conn.isVideoMirrored = mirrored
-                }
-            }
+            guard let self,
+                  let conn = self.videoOutput.connection(with: .video),
+                  conn.isVideoMirroringSupported else { return }
+            conn.automaticallyAdjustsVideoMirroring = false
+            conn.isVideoMirrored = mirrored
         }
     }
 
     // MARK: - Private
 
-    private func applyOrientation() {
-        // Both iPhone and iPad: try .landscapeRight first.
-        // If still wrong on iPad, the user can flip via the mirror button in-app.
-        let orientation: AVCaptureVideoOrientation = .landscapeRight
-        if let conn = videoOutput.connection(with: .video) {
-            conn.videoOrientation = orientation
+    private func applyOutputOrientation() {
+        guard let conn = videoOutput.connection(with: .video) else { return }
+        if #available(iOS 17, *) {
+            // 0° = sensor-native landscape orientation (no rotation).
+            // The preview layer uses the same angle so both are identical.
+            if conn.isVideoRotationAngleSupported(0) {
+                conn.videoRotationAngle = 0
+            }
+        } else {
+            conn.videoOrientation = .landscapeRight
         }
     }
 }
@@ -154,5 +145,5 @@ extension CameraCapture: AVCaptureVideoDataOutputSampleBufferDelegate {
 
 enum CameraError: LocalizedError {
     case deviceUnavailable
-    var errorDescription: String? { "Camera is unavailable." }
+    var errorDescription: String? { "Back camera is unavailable." }
 }

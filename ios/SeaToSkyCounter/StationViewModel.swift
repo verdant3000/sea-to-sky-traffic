@@ -80,7 +80,7 @@ class StationViewModel: NSObject, ObservableObject {
             case .success:
                 self.isDetectorReady = self.detector.isReady
                 if !self.detector.isReady { self.waitForDetector() }
-                if self.isMirrored { self.camera.setMirrored(true) }
+                if self.isMirrored { self.camera.setOutputMirrored(true) }
                 self.camera.start()
                 self.shipper.start()   // Timer.scheduledTimer — must be on main ✓
             case .failure(let err):
@@ -95,9 +95,7 @@ class StationViewModel: NSObject, ObservableObject {
         UIApplication.shared.isIdleTimerDisabled = false
     }
 
-    func makeCameraPreviewLayer() -> AVCaptureVideoPreviewLayer {
-        camera.makePreviewLayer()
-    }
+    var captureSession: AVCaptureSession { camera.session }
 
     func syncNow() { shipper.syncNow() }
 
@@ -115,7 +113,7 @@ class StationViewModel: NSObject, ObservableObject {
 
     func toggleMirror() {
         let next = !isMirrored
-        camera.setMirrored(next)
+        camera.setOutputMirrored(next)
         isMirrored = next
         UserDefaults.standard.set(next, forKey: "isMirrored")
     }
