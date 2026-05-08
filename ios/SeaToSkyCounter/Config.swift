@@ -10,7 +10,7 @@ enum Config {
 
     // --- API -----------------------------------------------------------
     static let apiBaseURL   = "https://sea-to-sky-traffic-production.up.railway.app"
-    static let apiKey       = ""             // set if API requires x-api-key header
+    static let apiKey       = "38ea07ed71f949de55bb43b442c088bdf14e23b48ffc7de5cbdb3cc8a3adb95b"
 
     // --- Tripwire ------------------------------------------------------
     // Normalized X position of the counting line in landscape. 0.0 = left, 1.0 = right.

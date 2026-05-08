@@ -67,6 +67,8 @@ class StationViewModel: NSObject, ObservableObject {
         UIApplication.shared.isIdleTimerDisabled = true
         let idiom = UIDevice.current.userInterfaceIdiom
         print("[SeaToSky] Device: \(idiom == .pad ? "iPad" : "iPhone")  (userInterfaceIdiom=\(idiom.rawValue))")
+        let keyPreview = Config.apiKey.isEmpty ? "<empty>" : String(Config.apiKey.prefix(8)) + "..."
+        print("[SeaToSky] API key: \(keyPreview)  base=\(Config.apiBaseURL)")
         shipper.stationID = selectedStationID
         counter.wireX     = tripwireX
         counter.wireAngle = wireAngle
