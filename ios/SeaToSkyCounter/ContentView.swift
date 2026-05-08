@@ -4,8 +4,6 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var vm = StationViewModel()
-    // Tracks the zoom level when each pinch gesture begins so successive
-    // pinches multiply from the previous zoom rather than resetting to 1×.
     @State private var pinchBaseZoom: CGFloat = 1.0
 
     var body: some View {
@@ -13,9 +11,6 @@ struct ContentView: View {
             ZStack {
                 Color.black
 
-                // Camera preview + detection overlay rotate together so
-                // bounding boxes stay aligned with the rotated image.
-                // At 90°/270° we scale up to fill the landscape frame.
                 ZStack {
                     CameraPreviewView(vm: vm)
                     DetectionOverlay(boxes: vm.visibleBoxes,
@@ -29,31 +24,42 @@ struct ContentView: View {
                     : 1.0)
                 .gesture(
                     MagnificationGesture()
-                        .onChanged { scale in
-                            vm.setZoom(pinchBaseZoom * scale)
-                        }
-                        .onEnded { scale in
-                            // Clamp to 1–10; CameraCapture also clamps to device max.
+                        .onChanged { scale in vm.setZoom(pinchBaseZoom * scale) }
+                        .onEnded   { scale in
                             pinchBaseZoom = min(max(pinchBaseZoom * scale, 1.0), 10.0)
                         }
                 )
 
-                // Stats panel is always upright at the bottom.
+                // Zoom level indicator — top centre
                 VStack {
+                    Text(String(format: "%.1f×", vm.currentZoom))
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.85))
+                        .shadow(color: .black.opacity(0.6), radius: 2)
+                        .padding(.top, 12)
                     Spacer()
+                }
+
+                // Lens selector + stats panel anchored to bottom
+                VStack(spacing: 0) {
+                    Spacer()
+                    if vm.availableLenses.count > 1 {
+                        LensSelector(vm: vm)
+                    }
                     StatsPanel(vm: vm)
                 }
             }
             .ignoresSafeArea()
         }
         .ignoresSafeArea()
-        // When vm.resetZoom() fires, sync pinchBaseZoom so the next pinch
-        // starts from 1× rather than the pre-reset level.
         .onChange(of: vm.currentZoom) { newZoom in
             if newZoom == 1.0 { pinchBaseZoom = 1.0 }
         }
         .onAppear  { vm.start() }
         .onDisappear { vm.stop() }
+        .sheet(isPresented: $vm.showStationPicker) {
+            StationPickerSheet(vm: vm)
+        }
         .alert("Camera Error", isPresented: .constant(vm.errorMessage != nil)) {
             Button("OK") { vm.errorMessage = nil }
         } message: {
@@ -81,43 +87,28 @@ struct CameraPreviewView: UIViewControllerRepresentable {
 struct DetectionOverlay: View {
     let boxes:     [BoundingBox]
     let tripwireX: Double
-    let wireAngle: Double   // degrees from vertical
+    let wireAngle: Double
 
     var body: some View {
         Canvas { ctx, size in
-            // Tripwire line — rotated around its center point.
-            // Direction vector along the line: (sin θ, -cos θ) in screen coords.
             let θ  = wireAngle * .pi / 180.0
             let cx = size.width  * tripwireX
             let cy = size.height * 0.5
             let t  = max(size.width, size.height)
-            let dx = sin(θ) * t
-            let dy = cos(θ) * t
             var wirePath = Path()
-            wirePath.move(to:    CGPoint(x: cx - dx, y: cy + dy))
-            wirePath.addLine(to: CGPoint(x: cx + dx, y: cy - dy))
+            wirePath.move(to:    CGPoint(x: cx - sin(θ)*t, y: cy + cos(θ)*t))
+            wirePath.addLine(to: CGPoint(x: cx + sin(θ)*t, y: cy - cos(θ)*t))
             ctx.stroke(wirePath, with: .color(.yellow.opacity(0.85)), lineWidth: 2)
 
-            // Bounding boxes
             for box in boxes {
-                let r = CGRect(
-                    x:      box.rect.minX * size.width,
-                    y:      box.rect.minY * size.height,
-                    width:  box.rect.width  * size.width,
-                    height: box.rect.height * size.height
-                )
+                let r = CGRect(x:      box.rect.minX * size.width,
+                               y:      box.rect.minY * size.height,
+                               width:  box.rect.width  * size.width,
+                               height: box.rect.height * size.height)
                 ctx.stroke(Path(r), with: .color(boxColor(box.className)), lineWidth: 2)
-
-                // Label
-                let pct = Int(box.confidence * 100)
-                let label = "\(box.className) \(pct)%"
-                ctx.draw(
-                    Text(label)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.white),
-                    at: CGPoint(x: r.minX + 4, y: r.minY + 2),
-                    anchor: .topLeading
-                )
+                let label = "\(box.className) \(Int(box.confidence * 100))%"
+                ctx.draw(Text(label).font(.system(size: 11, weight: .semibold)).foregroundColor(.white),
+                         at: CGPoint(x: r.minX + 4, y: r.minY + 2), anchor: .topLeading)
             }
         }
     }
@@ -134,10 +125,34 @@ struct DetectionOverlay: View {
     }
 }
 
+// MARK: - Lens selector
+
+struct LensSelector: View {
+    @ObservedObject var vm: StationViewModel
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(vm.availableLenses) { lens in
+                let active = vm.currentLens?.deviceType == lens.deviceType
+                Button(lens.label) { vm.switchToLens(lens) }
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(active ? Color.yellow : Color.black.opacity(0.5))
+                    .foregroundColor(active ? .black : .white)
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
+    }
+}
+
 // MARK: - Stats panel
 
 struct StatsPanel: View {
     @ObservedObject var vm: StationViewModel
+    @State private var showResetConfirm = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -166,12 +181,12 @@ struct StatsPanel: View {
             .padding(.bottom, 4)
             .background(Color.black.opacity(0.4))
 
-            // Tripwire angle slider
+            // Tripwire angle slider (-60…+60°)
             HStack(spacing: 10) {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
                     .font(.system(size: 12))
                     .foregroundColor(.yellow.opacity(0.85))
-                Slider(value: $vm.wireAngle, in: -45...45)
+                Slider(value: $vm.wireAngle, in: -60...60)
                     .tint(.yellow)
                 Text("\(Int(vm.wireAngle))°")
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
@@ -185,6 +200,8 @@ struct StatsPanel: View {
 
             // Status bar
             HStack(spacing: 12) {
+
+                // Counting toggle — tap to pause/resume
                 Button { vm.toggleCounting() } label: {
                     HStack(spacing: 6) {
                         statusDot
@@ -195,73 +212,70 @@ struct StatsPanel: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!vm.isDetectorReady)
-                Spacer()
-                Text("Station \(Config.stationID)")
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.5))
 
-                Button {
-                    vm.rotatePreviewCCW()
-                } label: {
+                Spacer()
+
+                // Station selector
+                Button { vm.showStationPicker = true } label: {
+                    Text("Station \(vm.selectedStationID)")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+
+                // Preview rotate CCW
+                Button { vm.rotatePreviewCCW() } label: {
                     Image(systemName: "rotate.left")
                         .font(.system(size: 14))
                         .foregroundColor(.white.opacity(0.7))
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    vm.rotatePreviewCW()
-                } label: {
+                // Preview rotate CW
+                Button { vm.rotatePreviewCW() } label: {
                     Image(systemName: "rotate.right")
                         .font(.system(size: 14))
                         .foregroundColor(vm.previewRotation != 0 ? .yellow : .white.opacity(0.7))
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    vm.resetZoom()
-                } label: {
-                    Image(systemName: "1.circle")
-                        .font(.system(size: 14))
-                        .foregroundColor(vm.currentZoom != 1.0 ? .yellow : .white.opacity(0.7))
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    vm.flipCamera()
-                } label: {
-                    Image(systemName: vm.isFrontCamera ? "camera.rotate.fill" : "camera.rotate")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    vm.toggleMirror()
-                } label: {
+                // Mirror toggle
+                Button { vm.toggleMirror() } label: {
                     Image(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right")
                         .font(.system(size: 14))
                         .foregroundColor(vm.isMirrored ? .yellow : .white.opacity(0.7))
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    vm.syncNow()
-                } label: {
+                // Zoom reset — "1×" text
+                Button { vm.resetZoom() } label: {
+                    Text("1×")
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundColor(vm.currentZoom != 1.0 ? .yellow : .white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+
+                // Manual sync
+                Button { vm.syncNow() } label: {
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .font(.system(size: 14))
                         .foregroundColor(.white.opacity(0.7))
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    vm.resetCounts()
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                .buttonStyle(.plain)
+                // Reset counts — long-press only to avoid accidents
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.7))
+                    .onLongPressGesture(minimumDuration: 0.6) {
+                        showResetConfirm = true
+                    }
+                    .confirmationDialog("Reset Counts?", isPresented: $showResetConfirm) {
+                        Button("Reset", role: .destructive) { vm.resetCounts() }
+                        Button("Cancel", role: .cancel) { }
+                    } message: {
+                        Text("Clears northbound and southbound counts. Cannot be undone.")
+                    }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -291,6 +305,64 @@ struct StatsPanel: View {
         return "Counting"
     }
 }
+
+// MARK: - Station picker sheet
+
+struct StationPickerSheet: View {
+    @ObservedObject var vm: StationViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            Group {
+                if vm.isLoadingStations {
+                    ProgressView("Loading stations…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if vm.stations.isEmpty {
+                    Text("No stations found.\nCheck your network connection.")
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                        .padding()
+                } else {
+                    List(vm.stations) { station in
+                        Button {
+                            vm.selectStation(station)
+                            dismiss()
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(station.name)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    if let loc = station.location {
+                                        Text(loc)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                if station.id == vm.selectedStationID {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Select Station")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .onAppear { vm.fetchStations() }
+    }
+}
+
+// MARK: - Count cell
 
 struct CountCell: View {
     let label: String

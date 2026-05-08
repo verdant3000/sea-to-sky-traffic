@@ -10,6 +10,8 @@ class APIShipper {
 
     var onSync: ((Bool, Int) -> Void)?   // (success, count)
 
+    var stationID: Int = Config.stationID
+
     init(buffer: DetectionBuffer) {
         self.buffer = buffer
     }
@@ -34,7 +36,7 @@ class APIShipper {
         guard !detections.isEmpty else { return }
 
         isSyncing = true
-        let batch = DetectionBatch(stationId: Config.stationID, detections: detections)
+        let batch = DetectionBatch(stationId: stationID, detections: detections)
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
