@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import StationMap from './StationMap';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://sea-to-sky-traffic-production.up.railway.app';
 
-// ── API key helpers ────────────────────────────────────────────────────────────
+const EMPTY_FORM = { name: '', location: '', lat: '', lng: '' };
 
 function getStoredKey() { return localStorage.getItem('sts_api_key') || ''; }
 function saveStoredKey(k) { localStorage.setItem('sts_api_key', k); }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// ── API key ────────────────────────────────────────────────────────────────────
 
 function ApiKeyBanner({ apiKey, onEdit }) {
   return (
@@ -26,25 +27,22 @@ function ApiKeyBanner({ apiKey, onEdit }) {
 function ApiKeyModal({ current, onSave, onCancel }) {
   const [val, setVal] = useState(current);
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]">
       <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
         <h3 className="font-semibold text-slate-800 mb-3">API Key</h3>
         <input
           type="password"
           value={val}
           onChange={e => setVal(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && onSave(val.trim())}
           placeholder="Paste API key…"
           className="w-full border border-slate-200 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
           autoFocus
         />
         <div className="flex gap-2 mt-4 justify-end">
-          <button onClick={onCancel} className="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5">
-            Cancel
-          </button>
-          <button
-            onClick={() => onSave(val.trim())}
-            className="text-sm font-medium bg-blue-600 text-white rounded px-4 py-1.5 hover:bg-blue-700"
-          >
+          <button onClick={onCancel} className="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5">Cancel</button>
+          <button onClick={() => onSave(val.trim())}
+            className="text-sm font-medium bg-blue-600 text-white rounded px-4 py-1.5 hover:bg-blue-700">
             Save
           </button>
         </div>
@@ -53,69 +51,54 @@ function ApiKeyModal({ current, onSave, onCancel }) {
   );
 }
 
-function AddStationForm({ onSave, onCancel, apiKey }) {
-  const [form, setForm]     = useState({ name: '', location: '', lat: '', lng: '' });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState(null);
+// ── Add station form ───────────────────────────────────────────────────────────
 
-  const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) { setError('Name is required'); return; }
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_BASE}/api/stations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Api-Key': apiKey },
-        body: JSON.stringify({
-          name:     form.name.trim(),
-          location: form.location.trim() || null,
-          lat:      form.lat ? parseFloat(form.lat) : null,
-          lng:      form.lng ? parseFloat(form.lng) : null,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `HTTP ${res.status}`);
-      }
-      const station = await res.json();
-      onSave(station);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
+function AddStationForm({ form, onChange, onSubmit, onCancel, saving, error }) {
+  const set = (field) => (e) => onChange({ ...form, [field]: e.target.value });
+  const hasCoords = form.lat !== '' && form.lng !== '';
 
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-      <h3 className="font-semibold text-slate-700 mb-4">Add Station</h3>
-      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+      <div className="flex items-start justify-between mb-4">
+        <h3 className="font-semibold text-slate-700">Add Station</h3>
+        <p className="text-xs text-slate-400 mt-0.5">
+          {hasCoords
+            ? `Pin at ${Number(form.lat).toFixed(5)}, ${Number(form.lng).toFixed(5)}`
+            : 'Click the map to place a pin, or type coordinates below'}
+        </p>
+      </div>
+
+      <form onSubmit={onSubmit} className="grid grid-cols-2 gap-4">
         <div className="col-span-2 sm:col-span-1">
-          <label className="block text-xs font-medium text-slate-500 mb-1">Name <span className="text-red-400">*</span></label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">
+            Name <span className="text-red-400">*</span>
+          </label>
           <input value={form.name} onChange={set('name')} placeholder="e.g. Squamish North"
             className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
+
         <div className="col-span-2 sm:col-span-1">
           <label className="block text-xs font-medium text-slate-500 mb-1">Location</label>
           <input value={form.location} onChange={set('location')} placeholder="e.g. Hwy 99 km 45"
             className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
+
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">Latitude</label>
           <input value={form.lat} onChange={set('lat')} placeholder="49.7016"
             type="number" step="any"
             className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
+
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">Longitude</label>
           <input value={form.lng} onChange={set('lng')} placeholder="-123.1558"
             type="number" step="any"
             className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
+
         {error && <p className="col-span-2 text-sm text-red-500">{error}</p>}
+
         <div className="col-span-2 flex justify-end gap-2">
           <button type="button" onClick={onCancel}
             className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2">
@@ -130,6 +113,8 @@ function AddStationForm({ onSave, onCancel, apiKey }) {
     </div>
   );
 }
+
+// ── Station table ──────────────────────────────────────────────────────────────
 
 function StationRow({ station, onToggle }) {
   const [toggling, setToggling] = useState(false);
@@ -146,7 +131,9 @@ function StationRow({ station, onToggle }) {
         <div className="font-medium text-slate-800 text-sm">{station.name}</div>
         <div className="text-xs text-slate-400"># {station.station_id}</div>
       </td>
-      <td className="py-3 px-4 text-sm text-slate-600">{station.location || <span className="text-slate-300">—</span>}</td>
+      <td className="py-3 px-4 text-sm text-slate-600">
+        {station.location || <span className="text-slate-300">—</span>}
+      </td>
       <td className="py-3 px-4 text-sm text-slate-500 tabular-nums">
         {station.lat != null && station.lng != null
           ? `${Number(station.lat).toFixed(4)}, ${Number(station.lng).toFixed(4)}`
@@ -170,31 +157,52 @@ function StationRow({ station, onToggle }) {
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Main ───────────────────────────────────────────────────────────────────────
 
 export default function StationManager() {
-  const [stations,    setStations]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState(null);
-  const [apiKey,      setApiKey]      = useState(getStoredKey);
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [showAddForm,  setShowAddForm]  = useState(false);
+  const [stations,      setStations]      = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [fetchError,    setFetchError]    = useState(null);
+  const [apiKey,        setApiKey]        = useState(getStoredKey);
+  const [showKeyModal,  setShowKeyModal]  = useState(false);
+  const [showAddForm,   setShowAddForm]   = useState(false);
+  const [form,          setForm]          = useState(EMPTY_FORM);
+  const [saving,        setSaving]        = useState(false);
+  const [saveError,     setSaveError]     = useState(null);
+
+  // Derive pendingLatLng for the map from the form fields
+  const pendingLatLng = useMemo(() => {
+    if (!showAddForm) return null;
+    const lat = parseFloat(form.lat);
+    const lng = parseFloat(form.lng);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return { lat, lng };
+  }, [showAddForm, form.lat, form.lng]);
 
   const fetchStations = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setFetchError(null);
     try {
       const res = await fetch(`${API_BASE}/api/stations?all=true`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setStations(await res.json());
     } catch (e) {
-      setError(e.message);
+      setFetchError(e.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => { fetchStations(); }, [fetchStations]);
+
+  // Map click → fill form lat/lng
+  const handleMapClick = useCallback(({ lat, lng }) => {
+    setForm(f => ({
+      ...f,
+      lat: lat.toFixed(6),
+      lng: lng.toFixed(6),
+    }));
+  }, []);
 
   const handleToggle = async (station) => {
     try {
@@ -214,15 +222,47 @@ export default function StationManager() {
     }
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) { setSaveError('Name is required'); return; }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/stations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Api-Key': apiKey },
+        body: JSON.stringify({
+          name:     form.name.trim(),
+          location: form.location.trim() || null,
+          lat:      form.lat !== '' ? parseFloat(form.lat) : null,
+          lng:      form.lng !== '' ? parseFloat(form.lng) : null,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+      const newStation = await res.json();
+      setStations(prev => [...prev, newStation]);
+      setForm(EMPTY_FORM);
+      setShowAddForm(false);
+    } catch (e) {
+      setSaveError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelForm = () => {
+    setShowAddForm(false);
+    setForm(EMPTY_FORM);
+    setSaveError(null);
+  };
+
   const handleSaveKey = (key) => {
     setApiKey(key);
     saveStoredKey(key);
     setShowKeyModal(false);
-  };
-
-  const handleStationAdded = (station) => {
-    setStations(prev => [...prev, station]);
-    setShowAddForm(false);
   };
 
   return (
@@ -232,23 +272,37 @@ export default function StationManager() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <ApiKeyBanner apiKey={apiKey} onEdit={() => setShowKeyModal(true)} />
         <button
-          onClick={() => setShowAddForm(v => !v)}
+          onClick={() => { setShowAddForm(v => !v); if (showAddForm) setForm(EMPTY_FORM); }}
           className="text-sm font-medium bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700"
         >
-          + Add Station
+          {showAddForm ? '✕ Cancel' : '+ Add Station'}
         </button>
       </div>
 
-      {/* Add form */}
+      {/* Map — always shown; interactive when add form is open */}
+      <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm"
+           style={{ height: 380 }}>
+        <StationMap
+          stations={stations}
+          interactive={showAddForm}
+          onMapClick={handleMapClick}
+          pendingLatLng={pendingLatLng}
+        />
+      </div>
+
+      {/* Add form — below map */}
       {showAddForm && (
         <AddStationForm
-          apiKey={apiKey}
-          onSave={handleStationAdded}
-          onCancel={() => setShowAddForm(false)}
+          form={form}
+          onChange={setForm}
+          onSubmit={handleSubmit}
+          onCancel={handleCancelForm}
+          saving={saving}
+          error={saveError}
         />
       )}
 
-      {/* Table */}
+      {/* Station table */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full">
           <thead>
@@ -262,8 +316,8 @@ export default function StationManager() {
           <tbody>
             {loading ? (
               <tr><td colSpan={4} className="py-12 text-center text-sm text-slate-400">Loading…</td></tr>
-            ) : error ? (
-              <tr><td colSpan={4} className="py-12 text-center text-sm text-red-400">Error: {error}</td></tr>
+            ) : fetchError ? (
+              <tr><td colSpan={4} className="py-12 text-center text-sm text-red-400">Error: {fetchError}</td></tr>
             ) : stations.length === 0 ? (
               <tr><td colSpan={4} className="py-12 text-center text-sm text-slate-400">No stations yet</td></tr>
             ) : (
@@ -275,7 +329,6 @@ export default function StationManager() {
         </table>
       </div>
 
-      {/* API key modal */}
       {showKeyModal && (
         <ApiKeyModal current={apiKey} onSave={handleSaveKey} onCancel={() => setShowKeyModal(false)} />
       )}
