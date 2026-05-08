@@ -57,9 +57,10 @@ class CameraCapture: NSObject {
                 self.session.addOutput(self.videoOutput)
             }
 
-            // Portrait orientation — phone mounted portrait on gorilla pod.
+            // Landscape orientation — phone mounted sideways for highway deployment.
+            // landscapeRight = volume buttons on top when camera faces road.
             if let conn = self.videoOutput.connection(with: .video) {
-                conn.videoOrientation = .portrait
+                conn.videoOrientation = .landscapeRight
             }
 
             DispatchQueue.main.async { completion(.success(())) }

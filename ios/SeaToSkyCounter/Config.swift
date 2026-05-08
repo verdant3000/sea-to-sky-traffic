@@ -4,18 +4,18 @@ import Foundation
 enum Config {
 
     // --- Station identity -------------------------------------------
-    static let stationID    = 36
-    static let directionA   = "northbound"   // increasing Y (top → bottom)
-    static let directionB   = "southbound"   // decreasing Y (bottom → top)
+    static let stationID    = 1
+    static let directionA   = "northbound"   // increasing X (left → right in landscape)
+    static let directionB   = "southbound"   // decreasing X (right → left in landscape)
 
     // --- API -----------------------------------------------------------
     static let apiBaseURL   = "https://sea-to-sky-traffic-production.up.railway.app"
     static let apiKey       = ""             // set if API requires x-api-key header
 
     // --- Tripwire ------------------------------------------------------
-    // Normalized Y position of the counting line. 0.0 = top, 1.0 = bottom.
-    // Station 35 spec (optimal geometry): use ~0.55 for mid-frame placement.
-    static let tripwireY: Double = 0.55
+    // Normalized X position of the counting line in landscape. 0.0 = left, 1.0 = right.
+    // 0.5 = centre of frame. Adjust via Config before deploying each location.
+    static let tripwireX: Double = 0.50
 
     // --- Detection thresholds -----------------------------------------
     static let confidenceThreshold: Float = 0.40

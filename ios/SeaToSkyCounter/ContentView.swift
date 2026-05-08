@@ -71,11 +71,11 @@ struct DetectionOverlay: View {
 
     var body: some View {
         Canvas { ctx, size in
-            // Tripwire line
-            let wireY = size.height * Config.tripwireY
+            // Tripwire line — vertical in landscape, vehicles cross left↔right
+            let wireX = size.width * Config.tripwireX
             var wirePath = Path()
-            wirePath.move(to: CGPoint(x: 0, y: wireY))
-            wirePath.addLine(to: CGPoint(x: size.width, y: wireY))
+            wirePath.move(to: CGPoint(x: wireX, y: 0))
+            wirePath.addLine(to: CGPoint(x: wireX, y: size.height))
             ctx.stroke(wirePath, with: .color(.yellow.opacity(0.85)), lineWidth: 2)
 
             // Bounding boxes
