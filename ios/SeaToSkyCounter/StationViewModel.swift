@@ -15,6 +15,7 @@ class StationViewModel: NSObject, ObservableObject {
     @Published var isDetectorReady: Bool   = false
     @Published var visibleBoxes:    [BoundingBox] = []
     @Published var errorMessage:    String? = nil
+    @Published var isCounting:      Bool    = true
     @Published var isFrontCamera:   Bool    = false
     @Published var isMirrored:      Bool    = UserDefaults.standard.bool(forKey: "isMirrored")
     @Published var previewRotation: Double  = UserDefaults.standard.object(forKey: "previewRotation") as? Double ?? 0
@@ -47,6 +48,8 @@ class StationViewModel: NSObject, ObservableObject {
 
     // MARK: - Lifecycle
 
+    func toggleCounting() { isCounting.toggle() }
+
     func setZoom(_ factor: CGFloat) {
         camera.setZoom(factor)
         currentZoom = factor
@@ -78,7 +81,7 @@ class StationViewModel: NSObject, ObservableObject {
         counter.wireAngle = wireAngle
 
         counter.onCrossing = { [weak self] detection in
-            guard let self else { return }
+            guard let self, self.isCounting else { return }
             self.buffer.append(detection)
             DispatchQueue.main.async {
                 if detection.direction == Config.directionA {

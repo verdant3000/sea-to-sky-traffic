@@ -185,10 +185,16 @@ struct StatsPanel: View {
 
             // Status bar
             HStack(spacing: 12) {
-                statusDot
-                Text(statusText)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white.opacity(0.8))
+                Button { vm.toggleCounting() } label: {
+                    HStack(spacing: 6) {
+                        statusDot
+                        Text(statusText)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(!vm.isDetectorReady)
                 Spacer()
                 Text("Station \(Config.stationID)")
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
@@ -265,20 +271,24 @@ struct StatsPanel: View {
     }
 
     private var statusDot: some View {
-        Circle()
-            .fill(vm.isDetectorReady ? Color.green : Color.orange)
-            .frame(width: 8, height: 8)
+        let color: Color = {
+            if !vm.isDetectorReady { return .orange }
+            if !vm.isCounting      { return .red }
+            return .green
+        }()
+        return Circle().fill(color).frame(width: 8, height: 8)
     }
 
     private var statusText: String {
         if !vm.isDetectorReady { return "Loading model…" }
+        if !vm.isCounting      { return "Paused" }
         if vm.pending > 0      { return "\(vm.pending) queued" }
         if let d = vm.lastSyncDate {
             let fmt = RelativeDateTimeFormatter()
             fmt.unitsStyle = .abbreviated
             return "Synced \(fmt.localizedString(for: d, relativeTo: Date())) · \(vm.lastSyncCount) sent"
         }
-        return "Ready"
+        return "Counting"
     }
 }
 
