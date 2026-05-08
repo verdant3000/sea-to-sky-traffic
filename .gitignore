@@ -19,3 +19,13 @@ dist/
 
 # macOS
 .DS_Store
+
+# Xcode user state
+ios/SeaToSkyCounter.xcodeproj/xcuserdata/
+ios/SeaToSkyCounter.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Captured frames from Pi (training data — large, managed separately)
+pi/captures/
+
+# CoreML model package (binary weights — not suitable for git)
+ios/yolov8n.mlpackage/
