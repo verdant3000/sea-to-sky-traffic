@@ -4,7 +4,7 @@ const db         = require('../db');
 const requireApiKey = require('../middleware/auth');
 
 // Detectable NOW with standard yolov8n.pt (COCO)
-const COCO_CLASSES = new Set(['bicycle', 'car', 'motorcycle', 'bus', 'truck']);
+const COCO_CLASSES = new Set(['person', 'bicycle', 'car', 'motorcycle', 'bus', 'truck']);
 
 // Require custom YOLOv8 fine-tuning — accepted for forward-compatibility
 const CUSTOM_CLASSES = new Set([

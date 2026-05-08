@@ -150,7 +150,7 @@ class APIShipper: ObservableObject {
         req.httpBody = body
 
         do {
-            let (_, response) = try await URLSession.shared.data(for: req)
+            let (data, response) = try await URLSession.shared.data(for: req)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             if status < 300 {
                 buffer.removeFirst(batch.count)
@@ -161,6 +161,7 @@ class APIShipper: ObservableObject {
                 print("[Sync] ✓ Posted \(batch.count)  pending=\(buffer.count)")
             } else {
                 print("[Sync] ✗ HTTP \(status)")
+                print("[Sync] Error body: \(String(data: data, encoding: .utf8) ?? "nil")")
             }
         } catch {
             print("[Sync] ✗ \(error.localizedDescription)")
