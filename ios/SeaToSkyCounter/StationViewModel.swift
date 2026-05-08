@@ -172,10 +172,32 @@ class StationViewModel: NSObject, ObservableObject {
     func fetchStations() {
         guard let url = URL(string: "\(Config.apiBaseURL)/api/stations") else { return }
         isLoadingStations = true
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+        var req = URLRequest(url: url, timeoutInterval: 15)
+        if !Config.apiKey.isEmpty {
+            req.setValue(Config.apiKey, forHTTPHeaderField: "x-api-key")
+        }
+        URLSession.shared.dataTask(with: req) { [weak self] data, response, error in
+            let status = (response as? HTTPURLResponse)?.statusCode
+            if let error { print("[Stations] Error: \(error.localizedDescription)") }
+            if let status { print("[Stations] HTTP \(status)") }
+
             let decoded: [Station]
-            if let data { decoded = (try? JSONDecoder().decode([Station].self, from: data)) ?? [] }
-            else        { decoded = [] }
+            if let data, status == 200 {
+                do {
+                    decoded = try JSONDecoder().decode([Station].self, from: data)
+                    print("[Stations] Loaded \(decoded.count) station(s)")
+                } catch {
+                    let body = String(data: data, encoding: .utf8) ?? "<binary>"
+                    print("[Stations] Decode error: \(error)\nBody: \(body)")
+                    decoded = []
+                }
+            } else {
+                if let data, let body = String(data: data, encoding: .utf8) {
+                    print("[Stations] Body: \(body)")
+                }
+                decoded = []
+            }
+
             DispatchQueue.main.async {
                 self?.stations = decoded
                 self?.isLoadingStations = false
