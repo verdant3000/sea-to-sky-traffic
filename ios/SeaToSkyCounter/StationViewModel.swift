@@ -16,6 +16,14 @@ class StationViewModel: NSObject, ObservableObject {
     @Published var visibleBoxes:    [BoundingBox] = []
     @Published var errorMessage:    String? = nil
 
+    // Tripwire position (0.0 left … 1.0 right). Persisted in UserDefaults.
+    @Published var tripwireX: Double = UserDefaults.standard.object(forKey: "tripwireX") as? Double ?? Config.tripwireX {
+        didSet {
+            counter.wireX = tripwireX
+            UserDefaults.standard.set(tripwireX, forKey: "tripwireX")
+        }
+    }
+
     // Processing state — accessed only from outputQueue (single serial queue)
     private var frameIndex = 0
     private let detector   = YOLODetector()
@@ -28,6 +36,7 @@ class StationViewModel: NSObject, ObservableObject {
 
     func start() {
         UIApplication.shared.isIdleTimerDisabled = true
+        counter.wireX = tripwireX   // apply persisted value before first frame
 
         counter.onCrossing = { [weak self] detection in
             guard let self else { return }

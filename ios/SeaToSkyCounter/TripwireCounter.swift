@@ -19,7 +19,7 @@ class TripwireCounter {
     private(set) var countA = 0   // directionA (northbound — left → right)
     private(set) var countB = 0   // directionB (southbound — right → left)
 
-    private let wireX: Double     // vertical tripwire X position (landscape)
+    var wireX: Double             // vertical tripwire X position (landscape) — mutable for live slider
     private var tracks: [UUID: Track] = [:]
     private var frame = 0
 

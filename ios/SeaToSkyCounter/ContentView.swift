@@ -14,7 +14,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             // Bounding-box + tripwire overlay
-            DetectionOverlay(boxes: vm.visibleBoxes)
+            DetectionOverlay(boxes: vm.visibleBoxes, tripwireX: vm.tripwireX)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
@@ -67,12 +67,13 @@ final class PreviewUIView: UIView {
 // MARK: - Detection overlay (bounding boxes + tripwire)
 
 struct DetectionOverlay: View {
-    let boxes: [BoundingBox]
+    let boxes:     [BoundingBox]
+    let tripwireX: Double
 
     var body: some View {
         Canvas { ctx, size in
             // Tripwire line — vertical in landscape, vehicles cross left↔right
-            let wireX = size.width * Config.tripwireX
+            let wireX = size.width * tripwireX
             var wirePath = Path()
             wirePath.move(to: CGPoint(x: wireX, y: 0))
             wirePath.addLine(to: CGPoint(x: wireX, y: size.height))
@@ -128,6 +129,22 @@ struct StatsPanel: View {
                 CountCell(label: Config.directionB, count: vm.countB, color: .orange)
             }
             .frame(height: 80)
+
+            // Tripwire slider
+            HStack(spacing: 10) {
+                Image(systemName: "line.vertical")
+                    .font(.system(size: 12))
+                    .foregroundColor(.yellow.opacity(0.85))
+                Slider(value: $vm.tripwireX, in: 0...1)
+                    .tint(.yellow)
+                Text("\(Int(vm.tripwireX * 100))%")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundColor(.yellow.opacity(0.85))
+                    .frame(width: 36, alignment: .trailing)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.black.opacity(0.72))
 
             // Status bar
             HStack(spacing: 12) {
