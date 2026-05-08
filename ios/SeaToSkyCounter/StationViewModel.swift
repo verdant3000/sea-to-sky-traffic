@@ -17,6 +17,7 @@ class StationViewModel: NSObject, ObservableObject {
     @Published var errorMessage:    String? = nil
     @Published var isFrontCamera:   Bool    = false
     @Published var isMirrored:      Bool    = UserDefaults.standard.bool(forKey: "isMirrored")
+    @Published var previewRotation: Double  = UserDefaults.standard.object(forKey: "previewRotation") as? Double ?? 0
 
     // Tripwire position (0.0 left … 1.0 right). Persisted in UserDefaults.
     @Published var tripwireX: Double = UserDefaults.standard.object(forKey: "tripwireX") as? Double ?? Config.tripwireX {
@@ -44,8 +45,23 @@ class StationViewModel: NSObject, ObservableObject {
 
     // MARK: - Lifecycle
 
+    func rotatePreviewCW() {
+        let next = (previewRotation + 90).truncatingRemainder(dividingBy: 360)
+        previewRotation = next
+        UserDefaults.standard.set(next, forKey: "previewRotation")
+    }
+
+    func rotatePreviewCCW() {
+        let next = (previewRotation - 90 + 360).truncatingRemainder(dividingBy: 360)
+        previewRotation = next
+        UserDefaults.standard.set(next, forKey: "previewRotation")
+    }
+
     func start() {
         UIApplication.shared.isIdleTimerDisabled = true
+        // Confirm device type on launch so we can verify iPad detection in the console.
+        let idiom = UIDevice.current.userInterfaceIdiom
+        print("[SeaToSky] Device: \(idiom == .pad ? "iPad" : "iPhone")  (userInterfaceIdiom=\(idiom.rawValue))")
         counter.wireX     = tripwireX    // apply persisted values before first frame
         counter.wireAngle = wireAngle
 

@@ -6,23 +6,34 @@ struct ContentView: View {
     @StateObject private var vm = StationViewModel()
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        GeometryReader { geo in
+            ZStack {
+                Color.black
 
-            CameraPreviewView(vm: vm)
-                .ignoresSafeArea()
+                // Camera preview + detection overlay rotate together so
+                // bounding boxes stay aligned with the rotated image.
+                // At 90°/270° we scale up to fill the landscape frame.
+                ZStack {
+                    CameraPreviewView(vm: vm)
+                    DetectionOverlay(boxes: vm.visibleBoxes,
+                                     tripwireX: vm.tripwireX,
+                                     wireAngle: vm.wireAngle)
+                        .allowsHitTesting(false)
+                }
+                .rotationEffect(.degrees(vm.previewRotation))
+                .scaleEffect(Int(vm.previewRotation) % 180 != 0
+                    ? max(geo.size.width, geo.size.height) / min(geo.size.width, geo.size.height)
+                    : 1.0)
 
-            // Bounding-box + tripwire overlay
-            DetectionOverlay(boxes: vm.visibleBoxes, tripwireX: vm.tripwireX, wireAngle: vm.wireAngle)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
-            // Stats panel anchored to bottom
-            VStack {
-                Spacer()
-                StatsPanel(vm: vm)
+                // Stats panel is always upright at the bottom.
+                VStack {
+                    Spacer()
+                    StatsPanel(vm: vm)
+                }
             }
+            .ignoresSafeArea()
         }
+        .ignoresSafeArea()
         .onAppear  { vm.start() }
         .onDisappear { vm.stop() }
         .alert("Camera Error", isPresented: .constant(vm.errorMessage != nil)) {
@@ -164,6 +175,24 @@ struct StatsPanel: View {
                 Text("Station \(Config.stationID)")
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
                     .foregroundColor(.white.opacity(0.5))
+
+                Button {
+                    vm.rotatePreviewCCW()
+                } label: {
+                    Image(systemName: "rotate.left")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    vm.rotatePreviewCW()
+                } label: {
+                    Image(systemName: "rotate.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(vm.previewRotation != 0 ? .yellow : .white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
 
                 Button {
                     vm.flipCamera()
