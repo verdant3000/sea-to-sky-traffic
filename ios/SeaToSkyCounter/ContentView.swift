@@ -183,6 +183,24 @@ struct StatsPanel: View {
                     .foregroundColor(.white.opacity(0.5))
 
                 Button {
+                    vm.flipCamera()
+                } label: {
+                    Image(systemName: vm.isFrontCamera ? "camera.rotate.fill" : "camera.rotate")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    vm.toggleMirror()
+                } label: {
+                    Image(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(vm.isMirrored ? .yellow : .white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+
+                Button {
                     vm.syncNow()
                 } label: {
                     Image(systemName: "arrow.triangle.2.circlepath")

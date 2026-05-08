@@ -15,6 +15,8 @@ class StationViewModel: NSObject, ObservableObject {
     @Published var isDetectorReady: Bool   = false
     @Published var visibleBoxes:    [BoundingBox] = []
     @Published var errorMessage:    String? = nil
+    @Published var isFrontCamera:   Bool    = false
+    @Published var isMirrored:      Bool    = UserDefaults.standard.bool(forKey: "isMirrored")
 
     // Tripwire position (0.0 left … 1.0 right). Persisted in UserDefaults.
     @Published var tripwireX: Double = UserDefaults.standard.object(forKey: "tripwireX") as? Double ?? Config.tripwireX {
@@ -78,6 +80,7 @@ class StationViewModel: NSObject, ObservableObject {
             case .success:
                 self.isDetectorReady = self.detector.isReady
                 if !self.detector.isReady { self.waitForDetector() }
+                if self.isMirrored { self.camera.setMirrored(true) }
                 self.camera.start()
                 self.shipper.start()   // Timer.scheduledTimer — must be on main ✓
             case .failure(let err):
@@ -97,6 +100,25 @@ class StationViewModel: NSObject, ObservableObject {
     }
 
     func syncNow() { shipper.syncNow() }
+
+    func flipCamera() {
+        camera.flipCamera { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success:
+                self.isFrontCamera.toggle()
+            case .failure(let err):
+                self.errorMessage = err.localizedDescription
+            }
+        }
+    }
+
+    func toggleMirror() {
+        let next = !isMirrored
+        camera.setMirrored(next)
+        isMirrored = next
+        UserDefaults.standard.set(next, forKey: "isMirrored")
+    }
 
     func resetCounts() {
         counter.reset()
