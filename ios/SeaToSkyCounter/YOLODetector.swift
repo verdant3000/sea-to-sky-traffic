@@ -13,20 +13,25 @@ class YOLODetector {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
             do {
-                // Compile from the raw .mlpackage at runtime rather than loading the
-                // pre-compiled .mlmodelc. This avoids the "fopen failed / Invalidating
-                // cache" errors caused by a stale or corrupted on-device model cache.
-                guard let packageURL = Bundle.main.url(forResource: "yolov8n", withExtension: "mlpackage") else {
-                    print("[YOLO] ❌ yolov8n.mlpackage not found in bundle")
-                    return
-                }
-                print("[YOLO] Compiling model from .mlpackage…")
-                let compiledURL = try MLModel.compileModel(at: packageURL)
-
                 let cfg = MLModelConfiguration()
                 cfg.computeUnits = .cpuOnly   // Neural Engine caused err=-12710 on this device
 
-                let mlModel = try MLModel(contentsOf: compiledURL, configuration: cfg)
+                // Try runtime compile from .mlpackage first — bypasses the on-device
+                // optimization cache that causes "fopen failed / Invalidating cache"
+                // on iPhone 12. Fall back to pre-compiled .mlmodelc if Xcode compiled
+                // the package at build time instead of copying it raw.
+                let mlModel: MLModel
+                if let packageURL = Bundle.main.url(forResource: "yolov8n", withExtension: "mlpackage") {
+                    print("[YOLO] Found .mlpackage — compiling at runtime…")
+                    let compiledURL = try MLModel.compileModel(at: packageURL)
+                    mlModel = try MLModel(contentsOf: compiledURL, configuration: cfg)
+                } else if let compiledURL = Bundle.main.url(forResource: "yolov8n", withExtension: "mlmodelc") {
+                    print("[YOLO] Found .mlmodelc — loading pre-compiled model…")
+                    mlModel = try MLModel(contentsOf: compiledURL, configuration: cfg)
+                } else {
+                    print("[YOLO] ❌ Model not found in bundle (tried .mlpackage and .mlmodelc)")
+                    return
+                }
                 let outputs = mlModel.modelDescription.outputDescriptionsByName.keys.sorted().joined(separator: ", ")
                 print("[YOLO] Outputs: \(outputs)")
 
