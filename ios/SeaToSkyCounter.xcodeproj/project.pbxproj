@@ -12,7 +12,7 @@
 		277BA429BA73D44761B83945 /* BoundingBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5AE2D12B3AF63F73A48E803 /* BoundingBox.swift */; };
 		358B93B76F28E16A58E644E7 /* FrameGrabber.swift in Sources */ = {isa = PBXBuildFile; fileRef = E72603A61450374BDEBA9805 /* FrameGrabber.swift */; };
 		5BBA25156CEF643833DB2A77 /* TripwireCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 763540F0CC081812F9681FED /* TripwireCounter.swift */; };
-		8566EF6B3CC8723360337F81 /* yolov8n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 271CD9F2A2405DF593BE5479 /* yolov8n.mlpackage */; };
+		D5E6F7A8B9C0D1E2F3A4B5C6 /* yolov8n.mlpackage in Resources */ = {isa = PBXBuildFile; fileRef = 271CD9F2A2405DF593BE5479 /* yolov8n.mlpackage */; };
 		9164E6CC431076EE78684DA9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 827225C425D64172046E4180 /* ContentView.swift */; };
 		A25B8AF893FF32E9A6BEC5C6 /* APIShipper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A207BEED58FD261939A253E /* APIShipper.swift */; };
 		C9FCC38FD267B81F8F380552 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CEA12A110C81FC6A07D5AD6D /* Assets.xcassets */; };
@@ -137,6 +137,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C9FCC38FD267B81F8F380552 /* Assets.xcassets in Resources */,
+				D5E6F7A8B9C0D1E2F3A4B5C6 /* yolov8n.mlpackage in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -159,7 +160,6 @@
 				FAA940D03EA6DB15D4EEE412 /* SeaToSkyApp.swift in Sources */,
 				5BBA25156CEF643833DB2A77 /* TripwireCounter.swift in Sources */,
 				1093CDBBF2F83BBE5541C9D4 /* YOLODetector.swift in Sources */,
-				8566EF6B3CC8723360337F81 /* yolov8n.mlpackage in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
