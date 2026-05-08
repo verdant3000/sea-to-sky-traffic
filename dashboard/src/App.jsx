@@ -7,6 +7,7 @@ import VehicleMix      from './components/VehicleMix';
 import EmergencyCounter from './components/EmergencyCounter';
 import PatternHeatmap  from './components/PatternHeatmap';
 import StationHealth   from './components/StationHealth';
+import StationManager  from './components/StationManager';
 
 function useClock() {
   const [time, setTime] = useState(new Date());
@@ -18,7 +19,8 @@ function useClock() {
 }
 
 export default function App() {
-  const now = useClock();
+  const now  = useClock();
+  const [page, setPage] = useState('dashboard');
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -52,6 +54,23 @@ export default function App() {
             </p>
           </div>
         </div>
+        {/* Nav tabs */}
+        <div className="max-w-7xl mx-auto px-6 flex gap-1 pt-2">
+          {[['dashboard', 'Dashboard'], ['stations', 'Stations']].map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setPage(id)}
+              className={`text-sm font-medium px-4 py-2 rounded-t transition-colors
+                ${page === id
+                  ? 'bg-white text-slate-800'
+                  : 'text-blue-200 hover:text-white hover:bg-white/10'
+                }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Northbound / Southbound colour bar */}
         <div className="h-0.5 flex">
           <div className="flex-1 bg-blue-500" />
@@ -61,29 +80,35 @@ export default function App() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8 space-y-6">
 
-        {/* Row 1: Live flow (wide) + Direction ratio (narrow) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2"><LiveView /></div>
-          <div><FlowRatio /></div>
-        </div>
+        {page === 'stations' ? (
+          <StationManager />
+        ) : (
+          <>
+            {/* Row 1: Live flow (wide) + Direction ratio (narrow) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2"><LiveView /></div>
+              <div><FlowRatio /></div>
+            </div>
 
-        {/* Row 2: 24-hour traffic chart */}
-        <HourlyChart />
+            {/* Row 2: 24-hour traffic chart */}
+            <HourlyChart />
 
-        {/* Row 3: Speed trend */}
-        <SpeedChart />
+            {/* Row 3: Speed trend */}
+            <SpeedChart />
 
-        {/* Row 4: Vehicle mix + Emergency counter */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <VehicleMix />
-          <EmergencyCounter />
-        </div>
+            {/* Row 4: Vehicle mix + Emergency counter */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <VehicleMix />
+              <EmergencyCounter />
+            </div>
 
-        {/* Row 5: Weekly pattern heatmap */}
-        <PatternHeatmap />
+            {/* Row 5: Weekly pattern heatmap */}
+            <PatternHeatmap />
 
-        {/* Row 6: Station health — case temp/humidity + ambient weather context */}
-        <StationHealth stationId={1} />
+            {/* Row 6: Station health */}
+            <StationHealth stationId={1} />
+          </>
+        )}
 
       </main>
 
