@@ -8,7 +8,8 @@ private struct Track {
     var confidence:    Float
     var centX:         Double   // normalized — used for wire crossing
     var centY:         Double   // normalized — used for track matching + debounce
-    var prevCentX:     Double   // previous X for crossing detection
+    var prevCentX:     Double   // previous position for crossing detection
+    var prevCentY:     Double
     var framesTracked: Int
     var hasCrossed:    Bool
     var lastSeenFrame: Int
@@ -19,7 +20,9 @@ class TripwireCounter {
     private(set) var countA = 0   // directionA (northbound — left → right)
     private(set) var countB = 0   // directionB (southbound — right → left)
 
-    var wireX: Double             // vertical tripwire X position (landscape) — mutable for live slider
+    var wireX:     Double          // vertical tripwire X position (landscape) — mutable for live slider
+    var wireAngle: Double          // degrees from vertical (-45…+45) — mutable for live slider
+
     private var tracks: [UUID: Track] = [:]
     private var frame = 0
 
@@ -29,8 +32,9 @@ class TripwireCounter {
     // Called on a background queue; caller serialises all calls.
     var onCrossing: ((Detection) -> Void)?
 
-    init(wireX: Double = Config.tripwireX) {
-        self.wireX = wireX
+    init(wireX: Double = Config.tripwireX, wireAngle: Double = 0.0) {
+        self.wireX     = wireX
+        self.wireAngle = wireAngle
     }
 
     func reset() {
@@ -47,6 +51,7 @@ class TripwireCounter {
             if let (idx, _) = bestMatch(for: track, in: unmatched) {
                 let det = unmatched[idx]
                 track.prevCentX     = track.centX
+                track.prevCentY     = track.centY
                 track.centX         = Double(det.rect.midX)
                 track.centY         = Double(det.rect.midY)
                 track.className     = det.className
@@ -64,10 +69,11 @@ class TripwireCounter {
         // Spawn new tracks for unmatched detections.
         for det in unmatched {
             let cx = Double(det.rect.midX)
+            let cy = Double(det.rect.midY)
             let id = UUID()
             tracks[id] = Track(
                 id: id, className: det.className, confidence: det.confidence,
-                centX: cx, centY: Double(det.rect.midY), prevCentX: cx,
+                centX: cx, centY: cy, prevCentX: cx, prevCentY: cy,
                 framesTracked: 1, hasCrossed: false, lastSeenFrame: frame
             )
         }
@@ -77,16 +83,25 @@ class TripwireCounter {
         recentCrossings.removeAll { $0.time < cutoff }
     }
 
+    // Signed distance from point to tripwire line.
+    // Positive = right side of wire (directionA), negative = left side (directionB).
+    // At wireAngle=0 this reduces to (x - wireX), preserving original behaviour.
+    private func signedSide(x: Double, y: Double) -> Double {
+        let θ = wireAngle * .pi / 180.0
+        return cos(θ) * (x - wireX) + sin(θ) * (y - 0.5)
+    }
+
     private func checkCrossing(_ track: inout Track) {
         guard track.framesTracked >= Config.minTrackFrames else { return }
         guard !track.hasCrossed else { return }
 
-        let prev = track.prevCentX
-        let curr = track.centX
+        let prevSide = signedSide(x: track.prevCentX, y: track.prevCentY)
+        let currSide = signedSide(x: track.centX,     y: track.centY)
 
-        let crossedRight = prev < wireX && curr >= wireX   // left → right → directionA
-        let crossedLeft  = prev > wireX && curr <= wireX   // right → left → directionB
-        guard crossedRight || crossedLeft else { return }
+        // Sign change means the track crossed the wire.
+        guard prevSide * currSide < 0 else { return }
+
+        let goingA = prevSide < 0   // negative → positive: left → right → directionA
 
         // Debounce: skip if another vehicle crossed in the same lane (centY) recently.
         let now = Date()
@@ -98,8 +113,8 @@ class TripwireCounter {
         recentCrossings.append((centY: track.centY, time: now))
         track.hasCrossed = true
 
-        let direction = crossedRight ? Config.directionA : Config.directionB
-        if crossedRight { countA += 1 } else { countB += 1 }
+        let direction = goingA ? Config.directionA : Config.directionB
+        if goingA { countA += 1 } else { countB += 1 }
 
         onCrossing?(Detection(
             timestamp:     now,

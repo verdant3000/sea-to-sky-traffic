@@ -57,10 +57,12 @@ class CameraCapture: NSObject {
                 self.session.addOutput(self.videoOutput)
             }
 
-            // Landscape orientation — phone mounted sideways for highway deployment.
-            // landscapeRight = volume buttons on top when camera faces road.
+            // iPhone: landscapeRight (volume buttons up when camera faces road).
+            // iPad:   landscapeLeft  (different sensor/chassis orientation).
+            let orientation: AVCaptureVideoOrientation =
+                UIDevice.current.userInterfaceIdiom == .pad ? .landscapeLeft : .landscapeRight
             if let conn = self.videoOutput.connection(with: .video) {
-                conn.videoOrientation = .landscapeRight
+                conn.videoOrientation = orientation
             }
 
             DispatchQueue.main.async { completion(.success(())) }

@@ -24,6 +24,14 @@ class StationViewModel: NSObject, ObservableObject {
         }
     }
 
+    // Tripwire angle in degrees from vertical (-45 … +45). Persisted in UserDefaults.
+    @Published var wireAngle: Double = UserDefaults.standard.object(forKey: "wireAngle") as? Double ?? 0.0 {
+        didSet {
+            counter.wireAngle = wireAngle
+            UserDefaults.standard.set(wireAngle, forKey: "wireAngle")
+        }
+    }
+
     // Processing state — accessed only from outputQueue (single serial queue)
     private var frameIndex = 0
     private let detector   = YOLODetector()
@@ -36,7 +44,8 @@ class StationViewModel: NSObject, ObservableObject {
 
     func start() {
         UIApplication.shared.isIdleTimerDisabled = true
-        counter.wireX = tripwireX   // apply persisted value before first frame
+        counter.wireX     = tripwireX    // apply persisted values before first frame
+        counter.wireAngle = wireAngle
 
         counter.onCrossing = { [weak self] detection in
             guard let self else { return }

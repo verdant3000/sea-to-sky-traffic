@@ -14,7 +14,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             // Bounding-box + tripwire overlay
-            DetectionOverlay(boxes: vm.visibleBoxes, tripwireX: vm.tripwireX)
+            DetectionOverlay(boxes: vm.visibleBoxes, tripwireX: vm.tripwireX, wireAngle: vm.wireAngle)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
@@ -69,14 +69,21 @@ final class PreviewUIView: UIView {
 struct DetectionOverlay: View {
     let boxes:     [BoundingBox]
     let tripwireX: Double
+    let wireAngle: Double   // degrees from vertical
 
     var body: some View {
         Canvas { ctx, size in
-            // Tripwire line — vertical in landscape, vehicles cross left↔right
-            let wireX = size.width * tripwireX
+            // Tripwire line — rotated around its center point.
+            // Direction vector along the line: (sin θ, -cos θ) in screen coords.
+            let θ  = wireAngle * .pi / 180.0
+            let cx = size.width  * tripwireX
+            let cy = size.height * 0.5
+            let t  = max(size.width, size.height)
+            let dx = sin(θ) * t
+            let dy = cos(θ) * t
             var wirePath = Path()
-            wirePath.move(to: CGPoint(x: wireX, y: 0))
-            wirePath.addLine(to: CGPoint(x: wireX, y: size.height))
+            wirePath.move(to:    CGPoint(x: cx - dx, y: cy + dy))
+            wirePath.addLine(to: CGPoint(x: cx + dx, y: cy - dy))
             ctx.stroke(wirePath, with: .color(.yellow.opacity(0.85)), lineWidth: 2)
 
             // Bounding boxes
@@ -130,7 +137,7 @@ struct StatsPanel: View {
             }
             .frame(height: 80)
 
-            // Tripwire slider
+            // Tripwire position slider
             HStack(spacing: 10) {
                 Image(systemName: "line.vertical")
                     .font(.system(size: 12))
@@ -143,7 +150,25 @@ struct StatsPanel: View {
                     .frame(width: 36, alignment: .trailing)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+            .background(Color.black.opacity(0.72))
+
+            // Tripwire angle slider
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 12))
+                    .foregroundColor(.yellow.opacity(0.85))
+                Slider(value: $vm.wireAngle, in: -45...45)
+                    .tint(.yellow)
+                Text("\(Int(vm.wireAngle))°")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundColor(.yellow.opacity(0.85))
+                    .frame(width: 36, alignment: .trailing)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            .padding(.bottom, 8)
             .background(Color.black.opacity(0.72))
 
             // Status bar
