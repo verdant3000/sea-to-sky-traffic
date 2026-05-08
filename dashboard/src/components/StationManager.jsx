@@ -225,6 +225,7 @@ export default function StationManager() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) { setSaveError('Name is required'); return; }
+    console.log('[StationManager] apiKey from localStorage:', JSON.stringify(apiKey));
     setSaving(true);
     setSaveError(null);
     try {
