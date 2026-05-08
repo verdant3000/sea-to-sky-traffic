@@ -1,144 +1,137 @@
+import Combine
 import CoreGraphics
 import Foundation
 
-// One tracked object across inference frames.
-private struct Track {
-    let id:            UUID
-    var className:     String
-    var confidence:    Float
-    var centX:         Double   // normalized — used for wire crossing
-    var centY:         Double   // normalized — used for track matching + debounce
-    var prevCentX:     Double   // previous position for crossing detection
-    var prevCentY:     Double
-    var framesTracked: Int
-    var hasCrossed:    Bool
-    var lastSeenFrame: Int
-}
+// Motor vehicles — heavier traffic
+let motorVehicleClasses: Set<String> = ["car", "truck", "bus", "motorcycle"]
+// Active modes — cyclists and pedestrians
+let activeModeClasses:   Set<String> = ["bicycle", "person"]
+// All classes that participate in tracking and counting
+let trackedClasses:      Set<String> = motorVehicleClasses.union(activeModeClasses)
 
-class TripwireCounter {
+class TripwireCounter: ObservableObject {
 
-    private(set) var countA = 0   // directionA (northbound — left → right)
-    private(set) var countB = 0   // directionB (southbound — right → left)
+    @Published var vehicleNB: Int = 0
+    @Published var vehicleSB: Int = 0
+    @Published var activeNB:  Int = 0
+    @Published var activeSB:  Int = 0
 
-    var wireX:     Double          // vertical tripwire X position (landscape) — mutable for live slider
-    var wireAngle: Double          // degrees from vertical (-45…+45) — mutable for live slider
+    @Published var isCounting: Bool = true
 
-    private var tracks: [UUID: Track] = [:]
-    private var frame = 0
+    @Published var wireX: Double =
+        UserDefaults.standard.object(forKey: "wireX") as? Double ?? 0.5 {
+        didSet { UserDefaults.standard.set(wireX, forKey: "wireX") }
+    }
 
-    // Debounce: record crossing centY positions + times (lane position in landscape).
-    private var recentCrossings: [(centY: Double, time: Date)] = []
+    @Published var wireAngle: Double =
+        UserDefaults.standard.object(forKey: "wireAngle") as? Double ?? 0.0 {
+        didSet { UserDefaults.standard.set(wireAngle, forKey: "wireAngle") }
+    }
 
-    // Called on a background queue; caller serialises all calls.
-    var onCrossing: ((Detection) -> Void)?
+    /// Called on main thread whenever a vehicle crosses the wire.
+    /// Arguments: direction ("northbound"/"southbound"), vehicleType, confidence, boundingBox.
+    var onCrossing: ((String, String, Float, BoundingBox) -> Void)?
 
-    init(wireX: Double = Config.tripwireX, wireAngle: Double = 0.0) {
-        self.wireX     = wireX
-        self.wireAngle = wireAngle
+    // MARK: - Private tracking state
+
+    private struct Track {
+        var center:       CGPoint
+        var className:    String
+        var confidence:   Float
+        var frameSeen:    Int
+        var frameCreated: Int
+        var frameCrossed: Int
+    }
+
+    private var tracks:     [Track] = []
+    private var frameIndex: Int     = 0
+
+    private let matchDistance:   CGFloat = 0.12
+    private let minTrackAge:     Int     = 3
+    private let maxMissedFrames: Int     = 6
+    private let debounceFrames:  Int     = 15
+
+    // MARK: - Public API
+
+    func update(detections: [BoundingBox]) {
+        frameIndex += 1
+
+        let vehicles = detections.filter { trackedClasses.contains($0.className) }
+
+        tracks = tracks.filter { frameIndex - $0.frameSeen <= maxMissedFrames }
+
+        var matched = Set<Int>()
+
+        for box in vehicles {
+            let cx = box.rect.midX
+            let cy = box.rect.midY
+
+            var bestIdx:  Int?     = nil
+            var bestDist: CGFloat  = matchDistance
+            for (i, track) in tracks.enumerated() {
+                guard !matched.contains(i) else { continue }
+                let dx   = track.center.x - cx
+                let dy   = track.center.y - cy
+                let dist = (dx*dx + dy*dy).squareRoot()
+                if dist < bestDist { bestDist = dist; bestIdx = i }
+            }
+
+            if let idx = bestIdx {
+                let prevX = tracks[idx].center.x
+                let prevY = tracks[idx].center.y
+                matched.insert(idx)
+
+                let age          = frameIndex - tracks[idx].frameCreated
+                let sinceLastHit = frameIndex - tracks[idx].frameCrossed
+
+                if isCounting && age >= minTrackAge && sinceLastHit > debounceFrames {
+                    let prevD = signedDist(x: Double(prevX), y: Double(prevY))
+                    let currD = signedDist(x: Double(cx),   y: Double(cy))
+                    if (prevD < 0) != (currD < 0) {
+                        let isMotor = motorVehicleClasses.contains(tracks[idx].className)
+                        let goingNB = prevD < 0
+                        let direction = goingNB ? Config.directionA : Config.directionB
+                        if isMotor {
+                            if goingNB { vehicleNB += 1 } else { vehicleSB += 1 }
+                        } else {
+                            if goingNB { activeNB  += 1 } else { activeSB  += 1 }
+                        }
+                        tracks[idx].frameCrossed = frameIndex
+                        onCrossing?(direction, tracks[idx].className, tracks[idx].confidence, box)
+                    }
+                }
+
+                tracks[idx].center     = CGPoint(x: cx, y: cy)
+                tracks[idx].className  = box.className
+                tracks[idx].confidence = box.confidence
+                tracks[idx].frameSeen  = frameIndex
+            } else {
+                tracks.append(Track(
+                    center:       CGPoint(x: cx, y: cy),
+                    className:    box.className,
+                    confidence:   box.confidence,
+                    frameSeen:    frameIndex,
+                    frameCreated: frameIndex,
+                    frameCrossed: -100
+                ))
+            }
+        }
     }
 
     func reset() {
-        countA = 0; countB = 0
-        tracks.removeAll(); recentCrossings.removeAll(); frame = 0
+        vehicleNB = 0; vehicleSB = 0
+        activeNB  = 0; activeSB  = 0
+        tracks = []
     }
 
-    func update(detections: [BoundingBox]) {
-        frame += 1
-        var unmatched = detections
+    func toggleCounting() { isCounting.toggle() }
 
-        // Update existing tracks.
-        for (id, var track) in tracks {
-            if let (idx, _) = bestMatch(for: track, in: unmatched) {
-                let det = unmatched[idx]
-                track.prevCentX     = track.centX
-                track.prevCentY     = track.centY
-                track.centX         = Double(det.rect.midX)
-                track.centY         = Double(det.rect.midY)
-                track.className     = det.className
-                track.confidence    = det.confidence
-                track.framesTracked += 1
-                track.lastSeenFrame = frame
-                tracks[id]          = track
-                unmatched.remove(at: idx)
-                checkCrossing(&tracks[id]!)
-            } else if frame - track.lastSeenFrame > Config.maxMissingFrames {
-                tracks.removeValue(forKey: id)
-            }
-        }
+    // MARK: - Geometry
 
-        // Spawn new tracks for unmatched detections.
-        for det in unmatched {
-            let cx = Double(det.rect.midX)
-            let cy = Double(det.rect.midY)
-            let id = UUID()
-            tracks[id] = Track(
-                id: id, className: det.className, confidence: det.confidence,
-                centX: cx, centY: cy, prevCentX: cx, prevCentY: cy,
-                framesTracked: 1, hasCrossed: false, lastSeenFrame: frame
-            )
-        }
-
-        // Prune stale debounce entries.
-        let cutoff = Date().addingTimeInterval(-Config.crossingDebounceSec * 5)
-        recentCrossings.removeAll { $0.time < cutoff }
-    }
-
-    // Signed distance from point to tripwire line.
-    // Positive = right side of wire (directionA), negative = left side (directionB).
-    // At wireAngle=0 this reduces to (x - wireX), preserving original behaviour.
-    private func signedSide(x: Double, y: Double) -> Double {
+    // Signed perpendicular distance from (x,y) to the angled wire.
+    // Wire passes through (wireX, 0.5) with normal (cos θ, sin θ).
+    private func signedDist(x: Double, y: Double) -> Double {
         let θ = wireAngle * .pi / 180.0
-        return cos(θ) * (x - wireX) + sin(θ) * (y - 0.5)
-    }
-
-    private func checkCrossing(_ track: inout Track) {
-        guard track.framesTracked >= Config.minTrackFrames else { return }
-        guard !track.hasCrossed else { return }
-
-        let prevSide = signedSide(x: track.prevCentX, y: track.prevCentY)
-        let currSide = signedSide(x: track.centX,     y: track.centY)
-
-        // Sign change means the track crossed the wire.
-        guard prevSide * currSide < 0 else { return }
-
-        let goingA = prevSide < 0   // negative → positive: left → right → directionA
-
-        // Debounce: skip if another vehicle crossed in the same lane (centY) recently.
-        let now = Date()
-        if recentCrossings.contains(where: {
-            abs($0.centY - track.centY) < 0.15 &&
-            now.timeIntervalSince($0.time) < Config.crossingDebounceSec
-        }) { return }
-
-        recentCrossings.append((centY: track.centY, time: now))
-        track.hasCrossed = true
-
-        let direction = goingA ? Config.directionA : Config.directionB
-        if goingA { countA += 1 } else { countB += 1 }
-
-        onCrossing?(Detection(
-            timestamp:     now,
-            vehicleClass:  track.className,
-            direction:     direction,
-            confidence:    track.confidence,
-            speedEstimate: nil
-        ))
-    }
-
-    // Simple centroid-distance match. Returns (index into `pool`, score).
-    private func bestMatch(for track: Track, in pool: [BoundingBox]) -> (Int, Double)? {
-        var bestIdx: Int?
-        var bestDist = Config.trackingMaxDistance
-
-        for (i, det) in pool.enumerated() {
-            guard det.className == track.className else { continue }
-            let dx = Double(det.rect.midX) - track.centX
-            let dy = Double(det.rect.midY) - track.centY
-            let d  = (dx*dx + dy*dy).squareRoot()
-            if d < bestDist { bestDist = d; bestIdx = i }
-        }
-
-        guard let idx = bestIdx else { return nil }
-        return (idx, bestDist)
+        return (x - wireX) * cos(θ) + (y - 0.5) * sin(θ)
     }
 }

@@ -33,6 +33,7 @@ targets:
       properties:
         CFBundleDisplayName: Sea to Sky Counter
         NSCameraUsageDescription: "Sea to Sky Counter uses the camera to detect and count vehicles on Highway 99."
+        NSPhotoLibraryAddUsageDescription: "Sea to Sky Counter saves cropped vehicle images to Photos to build training data for the custom detection model."
         UIRequiresFullScreen: true
         UIStatusBarHidden: true
         UIViewControllerBasedStatusBarAppearance: false
@@ -41,6 +42,8 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         UILaunchScreen:
           UIColorName: ""
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
 
     settings:
       base:

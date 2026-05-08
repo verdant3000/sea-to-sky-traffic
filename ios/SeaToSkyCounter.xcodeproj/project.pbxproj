@@ -3,42 +3,42 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		0F4F352ADBBEE83355CC57D2 /* Detection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 131009194E336D99AF863EEC /* Detection.swift */; };
-		0FD58271EC46C765C6B4B7EA /* CameraCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 763123F9DB5AA8EAAA493424 /* CameraCapture.swift */; };
 		1093CDBBF2F83BBE5541C9D4 /* YOLODetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5528C7A576494FB43BBCF80B /* YOLODetector.swift */; };
+		277BA429BA73D44761B83945 /* BoundingBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5AE2D12B3AF63F73A48E803 /* BoundingBox.swift */; };
+		358B93B76F28E16A58E644E7 /* FrameGrabber.swift in Sources */ = {isa = PBXBuildFile; fileRef = E72603A61450374BDEBA9805 /* FrameGrabber.swift */; };
 		5BBA25156CEF643833DB2A77 /* TripwireCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 763540F0CC081812F9681FED /* TripwireCounter.swift */; };
 		8566EF6B3CC8723360337F81 /* yolov8n.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 271CD9F2A2405DF593BE5479 /* yolov8n.mlpackage */; };
-		8B167720C21A02AA48A07736 /* StationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D49B8C238749197B25450A0 /* StationViewModel.swift */; };
 		9164E6CC431076EE78684DA9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 827225C425D64172046E4180 /* ContentView.swift */; };
 		A25B8AF893FF32E9A6BEC5C6 /* APIShipper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A207BEED58FD261939A253E /* APIShipper.swift */; };
-		AC6AE63F30ABE4E08E752C16 /* NMS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D2CF69FACA1E9316FEC85AD /* NMS.swift */; };
-		AE7FD91FF81897B3D559172B /* DetectionBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 519E133B0D1CACBCF9E71FE0 /* DetectionBuffer.swift */; };
 		C9FCC38FD267B81F8F380552 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CEA12A110C81FC6A07D5AD6D /* Assets.xcassets */; };
 		D2DAA63EEF616127C018098E /* CameraPreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1257BFC796D075E90DA8025 /* CameraPreviewViewController.swift */; };
 		E0A892626A061BA0805FD97A /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5A7D1C5F9B1C6658D12B221 /* Config.swift */; };
+		E0FD33D1647FEDF8CCFC61DD /* CameraSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A231AA57309863FAC3C6CF2C /* CameraSession.swift */; };
 		FAA940D03EA6DB15D4EEE412 /* SeaToSkyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149EF564FBA56EFD67040311 /* SeaToSkyApp.swift */; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* CropSaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F7A8B9C0D1E2 /* CropSaver.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		131009194E336D99AF863EEC /* Detection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Detection.swift; sourceTree = "<group>"; };
 		149EF564FBA56EFD67040311 /* SeaToSkyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeaToSkyApp.swift; sourceTree = "<group>"; };
-		271CD9F2A2405DF593BE5479 /* yolov8n.mlpackage */ = {isa = PBXFileReference; path = yolov8n.mlpackage; sourceTree = "<group>"; };
-		2D2CF69FACA1E9316FEC85AD /* NMS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NMS.swift; sourceTree = "<group>"; };
-		38CA4556EEE3258167263A00 /* SeaToSkyCounter.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SeaToSkyCounter.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		271CD9F2A2405DF593BE5479 /* yolov8n.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = yolov8n.mlpackage; sourceTree = "<group>"; };
+		38CA4556EEE3258167263A00 /* SeaToSkyCounter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SeaToSkyCounter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A207BEED58FD261939A253E /* APIShipper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIShipper.swift; sourceTree = "<group>"; };
-		519E133B0D1CACBCF9E71FE0 /* DetectionBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionBuffer.swift; sourceTree = "<group>"; };
 		5528C7A576494FB43BBCF80B /* YOLODetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YOLODetector.swift; sourceTree = "<group>"; };
-		763123F9DB5AA8EAAA493424 /* CameraCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCapture.swift; sourceTree = "<group>"; };
 		763540F0CC081812F9681FED /* TripwireCounter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripwireCounter.swift; sourceTree = "<group>"; };
 		827225C425D64172046E4180 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		9D49B8C238749197B25450A0 /* StationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationViewModel.swift; sourceTree = "<group>"; };
+		A231AA57309863FAC3C6CF2C /* CameraSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSession.swift; sourceTree = "<group>"; };
 		A5A7D1C5F9B1C6658D12B221 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		A5AE2D12B3AF63F73A48E803 /* BoundingBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundingBox.swift; sourceTree = "<group>"; };
 		CEA12A110C81FC6A07D5AD6D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E1257BFC796D075E90DA8025 /* CameraPreviewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewViewController.swift; sourceTree = "<group>"; };
+		E72603A61450374BDEBA9805 /* FrameGrabber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameGrabber.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F7A8B9C0D1E2 /* CropSaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropSaver.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -47,15 +47,15 @@
 			children = (
 				4A207BEED58FD261939A253E /* APIShipper.swift */,
 				CEA12A110C81FC6A07D5AD6D /* Assets.xcassets */,
-				763123F9DB5AA8EAAA493424 /* CameraCapture.swift */,
+				A5AE2D12B3AF63F73A48E803 /* BoundingBox.swift */,
 				E1257BFC796D075E90DA8025 /* CameraPreviewViewController.swift */,
+				A231AA57309863FAC3C6CF2C /* CameraSession.swift */,
 				A5A7D1C5F9B1C6658D12B221 /* Config.swift */,
 				827225C425D64172046E4180 /* ContentView.swift */,
+				F1A2B3C4D5E6F7A8B9C0D1E2 /* CropSaver.swift */,
 				131009194E336D99AF863EEC /* Detection.swift */,
-				519E133B0D1CACBCF9E71FE0 /* DetectionBuffer.swift */,
-				2D2CF69FACA1E9316FEC85AD /* NMS.swift */,
+				E72603A61450374BDEBA9805 /* FrameGrabber.swift */,
 				149EF564FBA56EFD67040311 /* SeaToSkyApp.swift */,
-				9D49B8C238749197B25450A0 /* StationViewModel.swift */,
 				763540F0CC081812F9681FED /* TripwireCounter.swift */,
 				5528C7A576494FB43BBCF80B /* YOLODetector.swift */,
 			);
@@ -110,7 +110,6 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					B2E02FB9D69E1C879337B0F0 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -149,15 +148,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				A25B8AF893FF32E9A6BEC5C6 /* APIShipper.swift in Sources */,
-				0FD58271EC46C765C6B4B7EA /* CameraCapture.swift in Sources */,
+				277BA429BA73D44761B83945 /* BoundingBox.swift in Sources */,
 				D2DAA63EEF616127C018098E /* CameraPreviewViewController.swift in Sources */,
+				E0FD33D1647FEDF8CCFC61DD /* CameraSession.swift in Sources */,
 				E0A892626A061BA0805FD97A /* Config.swift in Sources */,
 				9164E6CC431076EE78684DA9 /* ContentView.swift in Sources */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* CropSaver.swift in Sources */,
 				0F4F352ADBBEE83355CC57D2 /* Detection.swift in Sources */,
-				AE7FD91FF81897B3D559172B /* DetectionBuffer.swift in Sources */,
-				AC6AE63F30ABE4E08E752C16 /* NMS.swift in Sources */,
+				358B93B76F28E16A58E644E7 /* FrameGrabber.swift in Sources */,
 				FAA940D03EA6DB15D4EEE412 /* SeaToSkyApp.swift in Sources */,
-				8B167720C21A02AA48A07736 /* StationViewModel.swift in Sources */,
 				5BBA25156CEF643833DB2A77 /* TripwireCounter.swift in Sources */,
 				1093CDBBF2F83BBE5541C9D4 /* YOLODetector.swift in Sources */,
 				8566EF6B3CC8723360337F81 /* yolov8n.mlpackage in Sources */,
@@ -239,7 +238,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = XLNNK58T56;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = SeaToSkyCounter/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -266,7 +265,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = XLNNK58T56;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = SeaToSkyCounter/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;

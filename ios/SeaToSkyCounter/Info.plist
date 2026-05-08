@@ -20,8 +20,15 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Sea to Sky Counter uses the camera to detect and count vehicles on Highway 99.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Sea to Sky Counter saves cropped vehicle images to Photos to build training data for the custom detection model.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

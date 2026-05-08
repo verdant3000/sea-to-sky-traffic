@@ -75,6 +75,41 @@ are logged with the correct northbound/southbound label.
 
 ---
 
+---
+
+## ML Training Pipeline
+
+Custom YOLOv8n model trained to replace COCO defaults with corridor-specific classes.
+
+**Classes:**
+`car` · `suv` · `pickup_truck` · `box_truck` · `delivery_van` · `rv` · `logging_truck` · `overland_rig` · `emergency_vehicle` · `motorcycle` · `bicycle`
+
+**Hardware targets:** Raspberry Pi 5 (NCNN), iOS (CoreML with NMS)
+
+**Training environment:** M2 Mac (MPS device), YOLOv8n fine-tune with frozen backbone
+
+**Workflow:**
+
+```bash
+cd ml
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
+# 1. Triage today's captures — splits 200 lowest-quality to holdout
+python triage.py
+
+# 2. Label remaining images in Roboflow, export as YOLOv8 → data/labeled/
+# 3. Train
+python train.py
+
+# 4. Export for deployment
+python export.py
+```
+
+See `docs/future-features.md` for planned entity tracking (named vehicles).
+
+---
+
 ## Build order
 
 - [x] Step 1: Pi detection script
@@ -84,3 +119,4 @@ are logged with the correct northbound/southbound label.
 - [ ] Step 5: Pattern analysis (after 2–3 weeks of real data)
 - [ ] Step 6: Event correlation
 - [ ] Step 7: Corridor view (Squamish ↔ Whistler ↔ Pemberton)
+- [ ] ML: Label captures → train custom YOLOv8n → deploy NCNN to Pi
