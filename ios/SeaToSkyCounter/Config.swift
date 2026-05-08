@@ -18,7 +18,7 @@ enum Config {
     static let tripwireX: Double = 0.50
 
     // --- Detection thresholds -----------------------------------------
-    static let confidenceThreshold: Float = 0.40
+    static let confidenceThreshold: Float = 0.15   // lowered for debugging; raise to 0.40 in production
     static let iouThreshold:        Float = 0.45
 
     // Run inference every N camera frames (~30fps ÷ 3 = ~10fps inference).

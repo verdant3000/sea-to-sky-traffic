@@ -1,11 +1,10 @@
 import AVFoundation
 
-// Represents one physical back camera (ultra-wide, wide, telephoto).
 struct CameraLens: Identifiable, Equatable {
-    let id          = UUID()
+    let id        = UUID()
     let deviceType: AVCaptureDevice.DeviceType
-    let label:      String    // "0.5×", "1×", "2×", …
-    let baseZoom:   CGFloat   // optical zoom relative to wide angle
+    let label:      String
+    let baseZoom:   CGFloat
 }
 
 protocol CameraCaptureDelegate: AnyObject {
@@ -21,9 +20,9 @@ class CameraCapture: NSObject {
     private let outputQueue  = DispatchQueue(label: "com.seatosky.camera.output",
                                              qos: .userInteractive)
 
-    private var currentInput:      AVCaptureDeviceInput?
-    private var currentDevice:     AVCaptureDevice?
-    private(set) var currentLens:  CameraLens?
+    private var currentInput:  AVCaptureDeviceInput?
+    private var currentDevice: AVCaptureDevice?
+    private(set) var currentLens:     CameraLens?
     private(set) var availableLenses: [CameraLens] = []
 
     // MARK: - Setup
@@ -34,17 +33,17 @@ class CameraCapture: NSObject {
 
             self.availableLenses = Self.discoverLenses()
 
+            // inputPriority lets us set device.activeFormat manually.
+            self.session.sessionPreset = .inputPriority
+
             self.session.beginConfiguration()
             defer { self.session.commitConfiguration() }
 
-            self.session.sessionPreset = .hd1280x720
-
-            // Prefer ultra-wide (widest highway coverage); fall back to wide angle.
-            let preferredType: AVCaptureDevice.DeviceType =
-                self.availableLenses.first?.deviceType ?? .builtInWideAngleCamera
+            // Prefer ultra-wide (widest FOV for highway coverage), fall back to wide.
+            let preferred = self.availableLenses.first?.deviceType ?? .builtInWideAngleCamera
 
             guard
-                let device = AVCaptureDevice.default(preferredType, for: .video, position: .back),
+                let device = AVCaptureDevice.default(preferred, for: .video, position: .back),
                 let input  = try? AVCaptureDeviceInput(device: device),
                 self.session.canAddInput(input)
             else {
@@ -54,9 +53,10 @@ class CameraCapture: NSObject {
             self.session.addInput(input)
             self.currentInput  = input
             self.currentDevice = device
-            self.currentLens   = self.availableLenses.first(where: { $0.deviceType == preferredType })
+            self.currentLens   = self.availableLenses.first(where: { $0.deviceType == preferred })
 
             try? device.lockForConfiguration()
+            self.selectWidestFormat(for: device)   // locks to widest FOV format for this lens
             device.videoZoomFactor = 1.0
             if device.isExposureModeSupported(.continuousAutoExposure) {
                 device.exposureMode = .continuousAutoExposure
@@ -67,10 +67,7 @@ class CameraCapture: NSObject {
             device.unlockForConfiguration()
 
             print("[SeaToSky] Lenses: \(self.availableLenses.map(\.label).joined(separator: ", "))")
-            print("[SeaToSky] Active: \(self.currentLens?.label ?? "?")  " +
-                  "zoom=\(device.videoZoomFactor)  " +
-                  "min=\(device.minAvailableVideoZoomFactor)  " +
-                  "max=\(device.activeFormat.videoMaxZoomFactor.rounded())")
+            print("[SeaToSky] Active: \(self.currentLens?.label ?? "?")  FOV=\(String(format: "%.1f", device.activeFormat.videoFieldOfView))°")
 
             self.videoOutput.setSampleBufferDelegate(self, queue: self.outputQueue)
             self.videoOutput.alwaysDiscardsLateVideoFrames = true
@@ -97,38 +94,51 @@ class CameraCapture: NSObject {
         sessionQueue.async { [weak self] in
             guard let self else { return }
 
-            self.session.beginConfiguration()
-            if let old = self.currentInput { self.session.removeInput(old) }
-
+            // Create the new device and input BEFORE touching the session,
+            // so we never leave the session in a zero-input state on failure.
             guard
                 let device = AVCaptureDevice.default(lens.deviceType, for: .video, position: .back),
-                let input  = try? AVCaptureDeviceInput(device: device),
-                self.session.canAddInput(input)
+                let input  = try? AVCaptureDeviceInput(device: device)
             else {
+                DispatchQueue.main.async { completion(.failure(CameraError.deviceUnavailable)) }
+                return
+            }
+
+            self.session.beginConfiguration()
+
+            guard self.session.canAddInput(input) else {
                 self.session.commitConfiguration()
                 DispatchQueue.main.async { completion(.failure(CameraError.deviceUnavailable)) }
                 return
             }
+
+            // Safe to swap now — new input is confirmed good.
+            if let old = self.currentInput { self.session.removeInput(old) }
             self.session.addInput(input)
+
             try? device.lockForConfiguration()
+            self.selectWidestFormat(for: device)
             device.videoZoomFactor = 1.0
             device.unlockForConfiguration()
+
             self.currentInput  = input
             self.currentDevice = device
             self.currentLens   = lens
             self.applyOutputOrientation()
             self.session.commitConfiguration()
+
+            print("[SeaToSky] Switched to \(lens.label)  FOV=\(String(format: "%.1f", device.activeFormat.videoFieldOfView))°")
             DispatchQueue.main.async { completion(.success(())) }
         }
     }
 
-    // MARK: - Zoom
+    // MARK: - Zoom (fine-tuning within the active lens)
 
     func setZoom(_ factor: CGFloat) {
         sessionQueue.async { [weak self] in
             guard let device = self?.currentDevice else { return }
-            let maxZoom = min(device.activeFormat.videoMaxZoomFactor, 10.0)
-            let clamped = min(max(factor, device.minAvailableVideoZoomFactor), maxZoom)
+            let maxZoom = min(device.activeFormat.videoMaxZoomFactor, 6.0)
+            let clamped = min(max(factor, 1.0), maxZoom)
             try? device.lockForConfiguration()
             device.videoZoomFactor = clamped
             device.unlockForConfiguration()
@@ -151,6 +161,21 @@ class CameraCapture: NSObject {
 
     // MARK: - Private
 
+    // Among formats supporting ≥720p, lock to the one with the widest field of view.
+    // This ensures we use the physical lens's full optical reach, not a digital crop.
+    private func selectWidestFormat(for device: AVCaptureDevice) {
+        let candidates = device.formats.filter { f in
+            let d = CMVideoFormatDescriptionGetDimensions(f.formatDescription)
+            return d.width >= 1280 && d.height >= 720
+        }
+        if let best = candidates.max(by: { $0.videoFieldOfView < $1.videoFieldOfView })
+                      ?? device.formats.first {
+            device.activeFormat = best
+            let d = CMVideoFormatDescriptionGetDimensions(best.formatDescription)
+            print("[SeaToSky] Active format: \(d.width)×\(d.height)  FOV=\(String(format: "%.1f", best.videoFieldOfView))°  maxZoom=\(best.videoMaxZoomFactor.rounded())")
+        }
+    }
+
     private func applyOutputOrientation() {
         guard let conn = videoOutput.connection(with: .video) else { return }
         if #available(iOS 17, *) {
@@ -160,7 +185,6 @@ class CameraCapture: NSObject {
         }
     }
 
-    // Discover available back lenses, ordered widest → narrowest.
     private static func discoverLenses() -> [CameraLens] {
         var lenses: [CameraLens] = []
         if AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back) != nil {
@@ -179,17 +203,14 @@ class CameraCapture: NSObject {
         return lenses
     }
 
-    // Find the optical zoom of the telephoto lens relative to wide angle
-    // by reading virtualDeviceSwitchOverVideoZoomFactors from a virtual device.
     private static func telephotoOpticalZoom() -> Double {
-        for deviceType in [AVCaptureDevice.DeviceType.builtInTripleCamera,
-                           .builtInDualCamera] {
+        for deviceType in [AVCaptureDevice.DeviceType.builtInTripleCamera, .builtInDualCamera] {
             if let vd = AVCaptureDevice.default(deviceType, for: .video, position: .back),
                let factor = vd.virtualDeviceSwitchOverVideoZoomFactors.last {
                 return factor.doubleValue
             }
         }
-        return 2.0  // safe fallback for iPhone 7 Plus and similar
+        return 2.0
     }
 }
 
