@@ -16,6 +16,7 @@ class CameraCapture: NSObject {
 
     private var currentInput:    AVCaptureDeviceInput?
     private var currentPosition: AVCaptureDevice.Position = .back
+    private var currentDevice:   AVCaptureDevice?
 
     // MARK: - Setup
 
@@ -39,9 +40,10 @@ class CameraCapture: NSObject {
             self.session.addInput(input)
             self.currentInput    = input
             self.currentPosition = .back
+            self.currentDevice   = device
 
             try? device.lockForConfiguration()
-            device.videoZoomFactor = 1.0   // prevent any automatic digital zoom
+            device.videoZoomFactor = 1.0
             if device.isExposureModeSupported(.continuousAutoExposure) {
                 device.exposureMode = .continuousAutoExposure
             }
@@ -49,6 +51,10 @@ class CameraCapture: NSObject {
                 device.whiteBalanceMode = .continuousAutoWhiteBalance
             }
             device.unlockForConfiguration()
+
+            print("[SeaToSky] Zoom: factor=\(device.videoZoomFactor), " +
+                  "min=\(device.minAvailableVideoZoomFactor), " +
+                  "max=\(device.activeFormat.videoMaxZoomFactor.rounded())")
 
             self.videoOutput.setSampleBufferDelegate(self, queue: self.outputQueue)
             self.videoOutput.alwaysDiscardsLateVideoFrames = true
@@ -60,8 +66,6 @@ class CameraCapture: NSObject {
                 self.session.addOutput(self.videoOutput)
             }
 
-            // Keep the pixel buffer in landscape orientation so YOLO
-            // receives frames that match what the preview layer shows.
             self.applyOutputOrientation()
 
             DispatchQueue.main.async { completion(.success(())) }
@@ -96,11 +100,26 @@ class CameraCapture: NSObject {
             device.unlockForConfiguration()
             self.currentInput    = input
             self.currentPosition = newPos
+            self.currentDevice   = device
             self.applyOutputOrientation()
             self.session.commitConfiguration()
             DispatchQueue.main.async { completion(.success(())) }
         }
     }
+
+    // Clamps to the device's supported range (capped at 10× for UX).
+    func setZoom(_ factor: CGFloat) {
+        sessionQueue.async { [weak self] in
+            guard let device = self?.currentDevice else { return }
+            let maxZoom = min(device.activeFormat.videoMaxZoomFactor, 10.0)
+            let clamped = min(max(factor, device.minAvailableVideoZoomFactor), maxZoom)
+            try? device.lockForConfiguration()
+            device.videoZoomFactor = clamped
+            device.unlockForConfiguration()
+        }
+    }
+
+    func resetZoom() { setZoom(1.0) }
 
     // Mirrors the pixel buffer fed to YOLO so it matches the preview layer.
     // The preview layer's own mirroring is handled by CameraPreviewViewController.
@@ -119,8 +138,6 @@ class CameraCapture: NSObject {
     private func applyOutputOrientation() {
         guard let conn = videoOutput.connection(with: .video) else { return }
         if #available(iOS 17, *) {
-            // 0° = sensor-native landscape orientation (no rotation).
-            // The preview layer uses the same angle so both are identical.
             if conn.isVideoRotationAngleSupported(0) {
                 conn.videoRotationAngle = 0
             }

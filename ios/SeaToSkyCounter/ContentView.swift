@@ -4,6 +4,9 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var vm = StationViewModel()
+    // Tracks the zoom level when each pinch gesture begins so successive
+    // pinches multiply from the previous zoom rather than resetting to 1×.
+    @State private var pinchBaseZoom: CGFloat = 1.0
 
     var body: some View {
         GeometryReader { geo in
@@ -24,6 +27,16 @@ struct ContentView: View {
                 .scaleEffect(Int(vm.previewRotation) % 180 != 0
                     ? max(geo.size.width, geo.size.height) / min(geo.size.width, geo.size.height)
                     : 1.0)
+                .gesture(
+                    MagnificationGesture()
+                        .onChanged { scale in
+                            vm.setZoom(pinchBaseZoom * scale)
+                        }
+                        .onEnded { scale in
+                            // Clamp to 1–10; CameraCapture also clamps to device max.
+                            pinchBaseZoom = min(max(pinchBaseZoom * scale, 1.0), 10.0)
+                        }
+                )
 
                 // Stats panel is always upright at the bottom.
                 VStack {
@@ -34,6 +47,11 @@ struct ContentView: View {
             .ignoresSafeArea()
         }
         .ignoresSafeArea()
+        // When vm.resetZoom() fires, sync pinchBaseZoom so the next pinch
+        // starts from 1× rather than the pre-reset level.
+        .onChange(of: vm.currentZoom) { newZoom in
+            if newZoom == 1.0 { pinchBaseZoom = 1.0 }
+        }
         .onAppear  { vm.start() }
         .onDisappear { vm.stop() }
         .alert("Camera Error", isPresented: .constant(vm.errorMessage != nil)) {
@@ -146,7 +164,7 @@ struct StatsPanel: View {
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, 4)
-            .background(Color.black.opacity(0.72))
+            .background(Color.black.opacity(0.4))
 
             // Tripwire angle slider
             HStack(spacing: 10) {
@@ -163,7 +181,7 @@ struct StatsPanel: View {
             .padding(.horizontal, 16)
             .padding(.top, 4)
             .padding(.bottom, 8)
-            .background(Color.black.opacity(0.72))
+            .background(Color.black.opacity(0.4))
 
             // Status bar
             HStack(spacing: 12) {
@@ -191,6 +209,15 @@ struct StatsPanel: View {
                     Image(systemName: "rotate.right")
                         .font(.system(size: 14))
                         .foregroundColor(vm.previewRotation != 0 ? .yellow : .white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    vm.resetZoom()
+                } label: {
+                    Image(systemName: "1.circle")
+                        .font(.system(size: 14))
+                        .foregroundColor(vm.currentZoom != 1.0 ? .yellow : .white.opacity(0.7))
                 }
                 .buttonStyle(.plain)
 
@@ -232,9 +259,9 @@ struct StatsPanel: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(Color.black.opacity(0.7))
+            .background(Color.black.opacity(0.4))
         }
-        .background(Color.black.opacity(0.75))
+        .background(Color.black.opacity(0.4))
     }
 
     private var statusDot: some View {
@@ -271,6 +298,6 @@ struct CountCell: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(Color.black.opacity(0.75))
+        .background(Color.black.opacity(0.4))
     }
 }

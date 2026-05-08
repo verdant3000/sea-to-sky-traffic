@@ -18,6 +18,8 @@ class StationViewModel: NSObject, ObservableObject {
     @Published var isFrontCamera:   Bool    = false
     @Published var isMirrored:      Bool    = UserDefaults.standard.bool(forKey: "isMirrored")
     @Published var previewRotation: Double  = UserDefaults.standard.object(forKey: "previewRotation") as? Double ?? 0
+    // currentZoom published so ContentView can sync pinchBaseZoom on reset.
+    @Published var currentZoom:     CGFloat = 1.0
 
     // Tripwire position (0.0 left … 1.0 right). Persisted in UserDefaults.
     @Published var tripwireX: Double = UserDefaults.standard.object(forKey: "tripwireX") as? Double ?? Config.tripwireX {
@@ -44,6 +46,16 @@ class StationViewModel: NSObject, ObservableObject {
     private lazy var shipper = APIShipper(buffer: buffer)
 
     // MARK: - Lifecycle
+
+    func setZoom(_ factor: CGFloat) {
+        camera.setZoom(factor)
+        currentZoom = factor
+    }
+
+    func resetZoom() {
+        camera.resetZoom()
+        currentZoom = 1.0
+    }
 
     func rotatePreviewCW() {
         let next = (previewRotation + 90).truncatingRemainder(dividingBy: 360)
