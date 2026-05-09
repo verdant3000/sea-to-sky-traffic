@@ -39,8 +39,9 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function HourlyChart() {
-  const { data, loading } = useApiData('/api/flow/hourly?hours=24', 5 * 60_000);
+export default function HourlyChart({ stationId } = {}) {
+  const path = stationId ? `/api/flow/hourly?hours=24&station_id=${stationId}` : '/api/flow/hourly?hours=24';
+  const { data, loading } = useApiData(path, 5 * 60_000);
 
   const chartData = data?.rows ? processRows(data.rows) : [];
   const total     = chartData.reduce((s, d) => s + d.northbound + d.southbound, 0);

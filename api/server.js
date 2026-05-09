@@ -19,7 +19,10 @@ app.use('/api/patterns',   require('./routes/patterns'));
 app.use('/api/events',     require('./routes/events'));
 app.use('/api/correlation',require('./routes/correlation'));
 app.use('/api/corridor',   require('./routes/corridor'));
-app.use('/api/export',     require('./routes/export'));
+app.use('/api/export',            require('./routes/export'));
+app.use('/api/vendors',           require('./routes/vendors'));
+app.use('/api/vendor-sightings',  require('./routes/vendorSightings'));
+app.use('/api/alerts',            require('./routes/alerts'));
 
 // Health check
 app.get('/health', async (req, res) => {

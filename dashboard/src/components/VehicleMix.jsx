@@ -40,8 +40,9 @@ function processVehicleMix(rows) {
   };
 }
 
-export default function VehicleMix() {
-  const { data, loading } = useApiData('/api/flow/hourly?hours=24', 5 * 60_000);
+export default function VehicleMix({ stationId } = {}) {
+  const path = stationId ? `/api/flow/hourly?hours=24&station_id=${stationId}` : '/api/flow/hourly?hours=24';
+  const { data, loading } = useApiData(path, 5 * 60_000);
 
   const { items, total } = data?.rows ? processVehicleMix(data.rows) : { items: [], total: 0 };
 
