@@ -1,27 +1,29 @@
 import Foundation
 
-struct Detection: Codable {
-    let timestamp:     Date
-    let vehicleClass:  String
-    let direction:     String
-    let confidence:    Float
-    let speedEstimate: Double?
+struct Station: Codable, Identifiable {
+    let id:       Int
+    let name:     String
+    let location: String?
 
     enum CodingKeys: String, CodingKey {
-        case timestamp
-        case vehicleClass  = "vehicle_class"
-        case direction
-        case confidence
-        case speedEstimate = "speed_estimate"
+        case id = "station_id"
+        case name
+        case location
     }
 }
 
-struct DetectionBatch: Encodable {
-    let stationId:  Int
-    let detections: [Detection]
+struct Detection: Codable {
+    let stationID:   Int
+    let direction:   String
+    let vehicleType: String
+    let confidence:  Float
+    let timestamp:   Date
 
     enum CodingKeys: String, CodingKey {
-        case stationId  = "station_id"
-        case detections
+        case stationID   = "station_id"
+        case direction
+        case vehicleType = "vehicle_type"
+        case confidence
+        case timestamp
     }
 }

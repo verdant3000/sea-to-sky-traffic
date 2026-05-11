@@ -1,14 +1,12 @@
 import AVFoundation
 import UIKit
 
-// UIViewController that owns AVCaptureVideoPreviewLayer.
-// Wrapped by CameraPreviewView (UIViewControllerRepresentable) in ContentView.
-final class CameraPreviewViewController: UIViewController {
+class CameraPreviewViewController: UIViewController {
 
     private let previewLayer: AVCaptureVideoPreviewLayer
 
     init(session: AVCaptureSession) {
-        self.previewLayer = AVCaptureVideoPreviewLayer(session: session)
+        previewLayer = AVCaptureVideoPreviewLayer(session: session)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -18,9 +16,17 @@ final class CameraPreviewViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .black
         previewLayer.videoGravity = .resizeAspectFill
-        previewLayer.frame = view.bounds
         view.layer.addSublayer(previewLayer)
-        applyRotation()
+
+        // Try now; also re-apply when the session actually starts running
+        // (connection may not exist until the session has inputs).
+        applyOrientation()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(sessionStarted),
+            name: .AVCaptureSessionDidStartRunning,
+            object: nil
+        )
     }
 
     override func viewDidLayoutSubviews() {
@@ -28,25 +34,20 @@ final class CameraPreviewViewController: UIViewController {
         previewLayer.frame = view.bounds
     }
 
-    // Called from updateUIViewController whenever vm.isMirrored changes.
-    func setMirrored(_ mirrored: Bool) {
-        guard let conn = previewLayer.connection,
-              conn.isVideoMirroringSupported else { return }
-        conn.automaticallyAdjustsVideoMirroring = false
-        conn.isVideoMirrored = mirrored
+    @objc private func sessionStarted() {
+        DispatchQueue.main.async { self.applyOrientation() }
     }
 
-    // MARK: - Private
-
-    private func applyRotation() {
+    private func applyOrientation() {
         guard let conn = previewLayer.connection else { return }
         if #available(iOS 17, *) {
-            // 0° = no rotation from sensor native = landscape-right on all iPhones/iPads.
             if conn.isVideoRotationAngleSupported(0) {
-                conn.videoRotationAngle = 0
+                conn.videoRotationAngle = 0   // sensor natural angle = landscape-right
             }
         } else {
-            conn.videoOrientation = .landscapeRight
+            if conn.isVideoOrientationSupported {
+                conn.videoOrientation = .landscapeRight
+            }
         }
     }
 }

@@ -21,9 +21,7 @@ model = YOLO("yolov8n.pt")
 
 model.export(
     format="coreml",
-    int8=True,
-    nms=False,
-    imgsz=640,
+    nms=True,
 )
 
 print()

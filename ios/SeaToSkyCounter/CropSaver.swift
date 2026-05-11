@@ -1,7 +1,7 @@
 import Photos
 import UIKit
 
-class CropSaver {
+class CropSaver: ObservableObject {
 
     private var authorized = false
 
