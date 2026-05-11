@@ -3,18 +3,19 @@ const router     = express.Router();
 const db         = require('../db');
 const requireApiKey = require('../middleware/auth');
 
-// Detectable NOW with standard yolov8n.pt (COCO)
-const COCO_CLASSES = new Set(['person', 'bicycle', 'car', 'motorcycle', 'bus', 'truck']);
-
-// Require custom YOLOv8 fine-tuning — accepted for forward-compatibility
-const CUSTOM_CLASSES = new Set([
-  'pickup_truck', 'suv', 'minivan',
-  'semi_truck', 'logging_truck', 'box_truck',
-  'overland_rig', 'convertible', 'tow_truck',
-  'ambulance', 'fire_truck', 'police_vehicle',
+// v1 custom YOLOv8 vehicle classes (attg model)
+const V1_VEHICLE_CLASSES = new Set([
+  'car', 'bus', 'motorcycle',
+  'box_truck', 'flatbed_truck', 'dumptruck', 'tanker_truck',
+  'delivery_van', 'utility_van',
+  'pickup_truck', 'suv', 'rv',
+  'cybertruck', 'overland_rig', 'emergency_vehicle',
 ]);
 
-const VALID_CLASSES = new Set([...COCO_CLASSES, ...CUSTOM_CLASSES, 'unknown']);
+// Active-mode COCO classes still accepted (person + bicycle, until v2)
+const ACTIVE_MODE_CLASSES = new Set(['person', 'bicycle']);
+
+const VALID_CLASSES = new Set([...V1_VEHICLE_CLASSES, ...ACTIVE_MODE_CLASSES, 'unknown']);
 
 const EMERGENCY_CLASSES = ['ambulance', 'fire_truck', 'police_vehicle'];
 

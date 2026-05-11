@@ -2,8 +2,14 @@ import Combine
 import CoreGraphics
 import Foundation
 
-// Motor vehicles — heavier traffic
-let motorVehicleClasses: Set<String> = ["car", "truck", "bus", "motorcycle"]
+// Motor vehicles — heavier traffic (v1 custom model classes)
+let motorVehicleClasses: Set<String> = [
+    "car", "bus", "motorcycle",
+    "box_truck", "flatbed_truck", "dumptruck", "tanker_truck",
+    "delivery_van", "utility_van",
+    "pickup_truck", "suv", "rv",
+    "cybertruck", "overland_rig", "emergency_vehicle",
+]
 // Active modes — cyclists and pedestrians
 let activeModeClasses:   Set<String> = ["bicycle", "person"]
 // All classes that participate in tracking and counting
