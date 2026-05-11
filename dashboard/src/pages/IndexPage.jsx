@@ -8,6 +8,7 @@ import TodaysNumbers    from '../components/TodaysNumbers';
 import ActiveAlerts     from '../components/ActiveAlerts';
 import VendorCounter    from '../components/VendorCounter';
 import RecentEmergencyVehicles from '../components/RecentEmergencyVehicles';
+import VehicleComposition from '../components/VehicleComposition';
 
 function useClock() {
   const [time, setTime] = useState(new Date());
@@ -71,7 +72,10 @@ export default function IndexPage() {
         {/* 2. Traffic Tide */}
         <FlowRatio />
 
-        {/* 3. Live Map */}
+        {/* 3. Vehicle Composition */}
+        <VehicleComposition />
+
+        {/* 4. Live Map */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <h2 className="font-semibold text-slate-800">Live Map</h2>
