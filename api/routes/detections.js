@@ -16,6 +16,28 @@ const CUSTOM_CLASSES = new Set([
 
 const VALID_CLASSES = new Set([...COCO_CLASSES, ...CUSTOM_CLASSES, 'unknown']);
 
+const EMERGENCY_CLASSES = ['ambulance', 'fire_truck', 'police_vehicle'];
+
+/**
+ * GET /api/detections/emergency?hours=24
+ * Returns recent ambulance/fire/police detections with station name.
+ */
+router.get('/emergency', async (req, res) => {
+  const hours = Math.min(Math.max(parseInt(req.query.hours, 10) || 24, 1), 168);
+  const { rows } = await db.query(
+    `SELECT d.detection_id, d.timestamp, d.vehicle_class, d.direction,
+            s.station_id, s.name AS station_name
+       FROM detections d
+       LEFT JOIN stations s ON s.station_id = d.station_id
+      WHERE d.vehicle_class = ANY($1)
+        AND d.timestamp >= NOW() - ($2 || ' hours')::interval
+      ORDER BY d.timestamp DESC
+      LIMIT 100`,
+    [EMERGENCY_CLASSES, String(hours)]
+  );
+  res.json({ hours, rows });
+});
+
 /**
  * POST /api/detections
  * Body: { station_id: number, detections: [{ timestamp, vehicle_class, direction, confidence?, speed_estimate? }] }

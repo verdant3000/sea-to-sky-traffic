@@ -15,7 +15,7 @@ export default function FlowRatio() {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <h2 className="font-semibold text-gray-900">Direction Ratio</h2>
+        <h2 className="font-semibold text-gray-900">Traffic Tide</h2>
         <span className="text-xs text-gray-400">
           {lastUpdated && !loading ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Loading…'}
         </span>

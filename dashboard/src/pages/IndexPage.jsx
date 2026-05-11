@@ -7,6 +7,7 @@ import LiveMapIndex     from '../components/LiveMapIndex';
 import TodaysNumbers    from '../components/TodaysNumbers';
 import ActiveAlerts     from '../components/ActiveAlerts';
 import VendorCounter    from '../components/VendorCounter';
+import RecentEmergencyVehicles from '../components/RecentEmergencyVehicles';
 
 function useClock() {
   const [time, setTime] = useState(new Date());
@@ -93,6 +94,9 @@ export default function IndexPage() {
 
         {/* 6. Vendor Counter */}
         <VendorCounter />
+
+        {/* 7. Recent Emergency Vehicles */}
+        <RecentEmergencyVehicles />
 
       </main>
 
