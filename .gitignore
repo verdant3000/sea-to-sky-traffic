@@ -27,5 +27,12 @@ ios/SeaToSkyCounter.xcodeproj/project.xcworkspace/xcuserdata/
 # Captured frames from Pi (training data — large, managed separately)
 pi/captures/
 
+# ML dataset bulk — track only data.yaml, ignore images/labels
+ml/data/labeled/*
+!ml/data/labeled/data.yaml
+ml/data/test_holdout/
+ml/data/unsorted/
+ml/runs/
+
 # CoreML model package (binary weights — not suitable for git)
 ios/yolov8n.mlpackage/

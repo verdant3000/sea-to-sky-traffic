@@ -3,21 +3,19 @@ const router     = express.Router();
 const db         = require('../db');
 const requireApiKey = require('../middleware/auth');
 
-// v1 custom YOLOv8 vehicle classes (attg model)
-const V1_VEHICLE_CLASSES = new Set([
-  'car', 'bus', 'motorcycle',
-  'box_truck', 'flatbed_truck', 'dumptruck', 'tanker_truck',
-  'delivery_van', 'utility_van',
-  'pickup_truck', 'suv', 'rv',
-  'cybertruck', 'overland_rig', 'emergency_vehicle',
+// v2 custom YOLOv8 vehicle classes (attg model) — 5 broad categories.
+// Subtype/brand (cybertruck, sprinter, amazon, ...) is carried separately
+// as the `entity_name` field, not the class label.
+const MOTOR_VEHICLE_CLASSES = new Set([
+  'passenger', 'truck', 'bus', 'delivery', 'emergency',
 ]);
 
-// Active-mode COCO classes still accepted (person + bicycle, until v2)
+// Active-mode classes still accepted
 const ACTIVE_MODE_CLASSES = new Set(['person', 'bicycle']);
 
-const VALID_CLASSES = new Set([...V1_VEHICLE_CLASSES, ...ACTIVE_MODE_CLASSES, 'unknown']);
+const VALID_CLASSES = new Set([...MOTOR_VEHICLE_CLASSES, ...ACTIVE_MODE_CLASSES, 'unknown']);
 
-const EMERGENCY_CLASSES = ['ambulance', 'fire_truck', 'police_vehicle'];
+const EMERGENCY_CLASSES = ['emergency'];
 
 /**
  * GET /api/detections/emergency?hours=24

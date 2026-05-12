@@ -1,0 +1,6 @@
+train: /Users/claude/AndThingsThatGo/sea-to-sky-traffic/ml/data/labeled/andthingsthatgo/train/images
+val: /Users/claude/AndThingsThatGo/sea-to-sky-traffic/ml/data/labeled/andthingsthatgo/valid/images
+test: /Users/claude/AndThingsThatGo/sea-to-sky-traffic/ml/data/labeled/andthingsthatgo/test/images
+
+nc: 5
+names: ['passenger', 'truck', 'bus', 'delivery', 'emergency']

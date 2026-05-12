@@ -2,13 +2,10 @@ import Combine
 import CoreGraphics
 import Foundation
 
-// Motor vehicles — heavier traffic (v1 custom model classes)
+// Motor vehicles — heavier traffic (v2 custom model classes, 5 categories)
+// Subtype/brand is carried separately as the detection's entity tag.
 let motorVehicleClasses: Set<String> = [
-    "car", "bus", "motorcycle",
-    "box_truck", "flatbed_truck", "dumptruck", "tanker_truck",
-    "delivery_van", "utility_van",
-    "pickup_truck", "suv", "rv",
-    "cybertruck", "overland_rig", "emergency_vehicle",
+    "passenger", "truck", "bus", "delivery", "emergency",
 ]
 // Active modes — cyclists and pedestrians
 let activeModeClasses:   Set<String> = ["bicycle", "person"]

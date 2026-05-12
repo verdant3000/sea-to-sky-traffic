@@ -3,7 +3,11 @@
 Fine-tune YOLOv8n on labeled vehicle crops.
 
 Requires data/labeled/data.yaml — export from Roboflow or build manually.
-Trains on Apple Silicon (MPS). Outputs to runs/attg/v1/.
+Trains on Apple Silicon (MPS). Outputs to runs/attg/v2/.
+
+v2 classes (5): passenger, truck, bus, delivery, emergency.
+Subtypes (cybertruck, logging_full, sprinter, amazon, ...) live as
+image tags in Roboflow, not class labels.
 """
 
 import sys
@@ -32,7 +36,7 @@ def main() -> None:
         batch=16,
         device="mps",
         project=str(SCRIPT_DIR / "runs/attg"),
-        name="v1",
+        name="v2",
         freeze=10,          # freeze backbone, fine-tune head only
         lr0=0.001,
         warmup_epochs=3,

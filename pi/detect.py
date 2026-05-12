@@ -27,7 +27,7 @@ import shipper
 # Vehicle class taxonomy
 # ---------------------------------------------------------------------------
 
-# Detectable NOW with standard yolov8n.pt (COCO weights, no training needed)
+# COCO class ids the Pi pulls out of standard yolov8n.pt.
 VEHICLE_CLASSES = {
     1: "bicycle",
     2: "car",
@@ -36,14 +36,16 @@ VEHICLE_CLASSES = {
     7: "truck",
 }
 
-# Require custom YOLOv8 fine-tuning on BC highway imagery.
-# Will be logged correctly if a fine-tuned model returns them; ignored with
-# standard weights. See brief for training roadmap.
-CUSTOM_TRAINING_REQUIRED = {
-    "pickup_truck", "suv", "minivan",
-    "semi_truck", "logging_truck", "box_truck",
-    "overland_rig", "convertible", "tow_truck",
-    "ambulance", "fire_truck", "police_vehicle",
+# Remap COCO names → v2 broad classes (passenger/truck/bus/delivery/emergency
+# + active modes person/bicycle). Used until the custom v2 NCNN model ships;
+# the v2 model emits these names directly so this map becomes a no-op.
+COCO_TO_V2 = {
+    "car":        "passenger",
+    "motorcycle": "passenger",
+    "truck":      "truck",
+    "bus":        "bus",
+    "bicycle":    "bicycle",
+    "person":     "person",
 }
 
 FRAME_SAVE_INTERVAL = 30  # seconds between full-frame snapshots
@@ -423,12 +425,13 @@ def main():
                 track["crossed"] = True
                 total_today += 1
                 ts       = datetime.now(timezone.utc).isoformat()
-                cls_name = VEHICLE_CLASSES.get(track["class_id"], "unknown")
-                speed    = estimate_speed(track, config.FRAME_RATE,
-                                          config.CAMERA_HEIGHT_M, config.CAMERA_ANGLE_DEG)
+                coco_name = VEHICLE_CLASSES.get(track["class_id"], "unknown")
+                cls_name  = COCO_TO_V2.get(coco_name, "unknown")
+                speed     = estimate_speed(track, config.FRAME_RATE,
+                                           config.CAMERA_HEIGHT_M, config.CAMERA_ANGLE_DEG)
                 buffer.insert_detection(ts, cls_name, direction, track["confidence"], speed)
                 log.info(
-                    f"  COUNTED  {cls_name:12s} {direction:12s}  "
+                    f"  COUNTED  {cls_name:10s} ({coco_name:10s}) {direction:12s}  "
                     f"conf={track['confidence']:.0%}  speed={speed} km/h  total={total_today}"
                 )
 
