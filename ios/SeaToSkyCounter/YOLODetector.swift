@@ -2,6 +2,27 @@ import Vision
 import CoreML
 import CoreGraphics
 
+// COCO class names (from stock yolov8n.pt) → v2 broad classes.
+// Anything not in this map is dropped — the iOS counter only cares about
+// vehicles + active modes. When the custom v2 model ships, its outputs are
+// already v2 names so this map collapses to a passthrough.
+private let cocoToV2: [String: String] = [
+    "car":        "passenger",
+    "motorcycle": "passenger",
+    "truck":      "truck",
+    "bus":        "bus",
+    "bicycle":    "bicycle",
+    "person":     "person",
+]
+
+// COCO class index → name, for the raw-tensor fallback path.
+// 80-class COCO indexing. We only need the ones cocoToV2 cares about;
+// everything else is filtered out downstream.
+private let cocoIndexName: [Int: String] = [
+    0: "person", 1: "bicycle", 2: "car", 3: "motorcycle",
+    5: "bus", 7: "truck",
+]
+
 class YOLODetector {
     private var request: VNCoreMLRequest?
     private(set) var isReady = false
@@ -72,9 +93,10 @@ class YOLODetector {
         if let obs = request.results as? [VNRecognizedObjectObservation] {
             return obs.compactMap { o in
                 guard let top = o.labels.first, top.confidence >= 0.15 else { return nil }
+                guard let v2Name = cocoToV2[top.identifier] else { return nil }
                 let r = o.boundingBox                  // Vision: origin bottom-left
                 let flipped = CGRect(x: r.minX, y: 1 - r.maxY, width: r.width, height: r.height)
-                return BoundingBox(classIndex: 0, className: top.identifier,
+                return BoundingBox(classIndex: 0, className: v2Name,
                                    confidence: top.confidence, rect: flipped)
             }
         }
@@ -122,19 +144,12 @@ class YOLODetector {
         }
 
         let kept = nms(boxes: rects, scores: scores, iouThreshold: 0.45)
-        return kept.map { i in
-            let name = cocoName(classes[i])
-            return BoundingBox(classIndex: classes[i], className: name,
+        return kept.compactMap { i in
+            guard let cocoName = cocoIndexName[classes[i]],
+                  let v2Name   = cocoToV2[cocoName] else { return nil }
+            return BoundingBox(classIndex: classes[i], className: v2Name,
                                confidence: scores[i], rect: rects[i])
         }
-    }
-
-    private func cocoName(_ idx: Int) -> String {
-        let names = [
-            1: "bicycle", 2: "car", 3: "motorcycle",
-            5: "bus", 7: "truck",
-        ]
-        return names[idx] ?? "cls_\(idx)"
     }
 
     // Greedy NMS
